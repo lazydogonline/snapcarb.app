@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Calendar, Clock, Users, Video, BookOpen, MessageCircle } from 'lucide-react-native';
+import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, ShoppingCart, Heart } from 'lucide-react-native';
 import { healthEvents } from '@/constants/health-data';
+import DrDavisEvents from '@/components/DrDavisEvents';
+import DrDavisAffiliates from '@/components/DrDavisAffiliates';
+import SociabilityTracker from '@/components/SociabilityTracker';
 
 export default function EventsScreen() {
+  const [activeTab, setActiveTab] = useState<'events' | 'affiliates' | 'sociability'>('events');
+  
   const upcomingEvents = healthEvents.filter(event => event.date > new Date());
   const pastEvents = healthEvents.filter(event => event.date <= new Date());
 
@@ -56,10 +61,39 @@ export default function EventsScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {upcomingEvents.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
+          onPress={() => setActiveTab('events')}
+        >
+          <Calendar size={20} color={activeTab === 'events' ? '#3b82f6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Events</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'affiliates' && styles.activeTab]}
+          onPress={() => setActiveTab('affiliates')}
+        >
+          <ShoppingCart size={20} color={activeTab === 'affiliates' ? '#3b82f6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'affiliates' && styles.activeTabText]}>Products</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'sociability' && styles.activeTab]}
+          onPress={() => setActiveTab('sociability')}
+        >
+          <Heart size={20} color={activeTab === 'affiliates' ? '#3b82f6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'sociability' && styles.activeTabText]}>Sociability</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Content based on active tab */}
+      {activeTab === 'events' && (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {upcomingEvents.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Upcoming Events</Text>
             {upcomingEvents.map((event) => (
               <TouchableOpacity
                 key={event.id}
@@ -189,6 +223,15 @@ export default function EventsScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
+
+      {activeTab === 'affiliates' && (
+        <DrDavisAffiliates />
+      )}
+
+      {activeTab === 'sociability' && (
+        <SociabilityTracker />
+      )}
     </SafeAreaView>
   );
 }
@@ -227,6 +270,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 16,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  activeTab: {
+    backgroundColor: '#eff6ff',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  activeTabText: {
+    color: '#3b82f6',
   },
   eventCard: {
     backgroundColor: '#ffffff',
@@ -370,4 +440,5 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 20,
   },
+
 });
