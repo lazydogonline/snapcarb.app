@@ -1,52 +1,61 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Utensils, Share2, BookOpen } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import RecipeSearch from '../../components/RecipeSearch';
+import RecipeCollection from '../../components/RecipeCollection';
 import appDownloadLinks from '../../config/app-links';
 
 export default function MealsScreen() {
+  const [showRecipeCollection, setShowRecipeCollection] = useState(false);
+
   const handleShareApp = () => {
-    const shareMessage = `🎯 Discover SnapCarb - Your AI-Powered Health Companion!
+    const message = `🍎 Discover SnapCarb - The Revolutionary Health App!
 
-🍽️ Generate unique, SnapCarb-approved recipes with AI
-🥗 Track your nutrition and eating windows
-🧠 Get personalized health insights
-🌱 Follow Dr. Davis's proven health principles
+Transform your health with:
+✅ AI-powered recipe generation
+✅ Real USDA nutrition data
+✅ SnapCarb diet compliance
+✅ Health tracking & insights
+✅ Community support
 
-📱 Download the app and start your health journey today!
+Download now: ${appDownloadLinks.getDownloadLink()}
 
-🔗 Download:
-🍎 iOS: ${appDownloadLinks.ios.appStore}
-🤖 Android: ${appDownloadLinks.android.playStore}
-🌐 Web: ${appDownloadLinks.web.downloadPage}
+#SnapCarb #Health #Wellness #LowCarb #Nutrition`;
 
-#SnapCarb #Health #AI #Nutrition #Wellness`;
-
-    Alert.alert(
-      'Share SnapCarb App', 
-      'Share the SnapCarb app with friends and family!',
-      [
-        { text: 'Copy Message', onPress: () => {
-          Alert.alert('Copied!', 'App details copied to clipboard');
-        }},
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    Alert.alert('Share SnapCarb', message, [
+      { text: 'Copy', onPress: () => Alert.alert('Copied!', 'App link copied to clipboard') },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
   };
 
   const handleMyRecipes = () => {
-    Alert.alert(
-      'My Recipes', 
-      'Access your saved recipe collection!',
-      [
-        { text: 'View Collection', onPress: () => {
-          Alert.alert('Coming Soon!', 'Recipe collection will be available in the next update');
-        }},
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    setShowRecipeCollection(true);
   };
+
+  const handleBackToSearch = () => {
+    setShowRecipeCollection(false);
+  };
+
+  if (showRecipeCollection) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch}>
+              <BookOpen size={32} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShareApp}>
+              <Share2 size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.title}>My Recipe Collection</Text>
+          <Text style={styles.subtitle}>Manage your saved SnapCarb recipes</Text>
+        </View>
+        <RecipeCollection userId="user-123" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -97,6 +106,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   shareButton: {
+    padding: 5,
+  },
+  backButton: {
     padding: 5,
   },
   title: {

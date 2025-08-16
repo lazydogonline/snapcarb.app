@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, ShoppingCart, Heart } from 'lucide-react-native';
+import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart } from 'lucide-react-native';
 import { healthEvents } from '@/constants/health-data';
 import DrDavisEvents from '@/components/DrDavisEvents';
-import DrDavisAffiliates from '@/components/DrDavisAffiliates';
 import SociabilityTracker from '@/components/SociabilityTracker';
 
 export default function EventsScreen() {
-  const [activeTab, setActiveTab] = useState<'events' | 'affiliates' | 'sociability'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'sociability'>('events');
   
   const upcomingEvents = healthEvents.filter(event => event.date > new Date());
   const pastEvents = healthEvents.filter(event => event.date <= new Date());
@@ -72,18 +71,10 @@ export default function EventsScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'affiliates' && styles.activeTab]}
-          onPress={() => setActiveTab('affiliates')}
-        >
-          <ShoppingCart size={20} color={activeTab === 'affiliates' ? '#3b82f6' : '#6b7280'} />
-          <Text style={[styles.tabText, activeTab === 'affiliates' && styles.activeTabText]}>Products</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
           style={[styles.tab, activeTab === 'sociability' && styles.activeTab]}
           onPress={() => setActiveTab('sociability')}
         >
-          <Heart size={20} color={activeTab === 'affiliates' ? '#3b82f6' : '#6b7280'} />
+          <Heart size={20} color={activeTab === 'sociability' ? '#3b82f6' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'sociability' && styles.activeTabText]}>Sociability</Text>
         </TouchableOpacity>
       </View>
@@ -223,10 +214,6 @@ export default function EventsScreen() {
           </View>
         </View>
       </ScrollView>
-      )}
-
-      {activeTab === 'affiliates' && (
-        <DrDavisAffiliates />
       )}
 
       {activeTab === 'sociability' && (

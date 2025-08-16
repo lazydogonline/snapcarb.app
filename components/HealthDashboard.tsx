@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Activity, 
@@ -13,7 +13,8 @@ import {
   Share2,
   BarChart3,
   Calendar,
-  Trophy
+  Trophy,
+  X
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { 
@@ -23,6 +24,7 @@ import {
   MetricAlert, 
   HealthGoal 
 } from '../types/health-metrics';
+import HealthDataService, { HealthDataInput } from '../services/health-data-service';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [goals, setGoals] = useState<HealthGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDataEntry, setShowDataEntry] = useState(false);
+  const [dataInput, setDataInput] = useState<HealthDataInput>({});
 
   useEffect(() => {
     loadHealthData();
@@ -44,11 +48,10 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const loadHealthData = async () => {
     try {
       setLoading(true);
-      // TODO: Load actual data from Supabase
-      // For now, using mock data
-      setMetrics(getMockHealthData());
-      setAlerts(getMockAlerts());
-      setGoals(getMockGoals());
+      // Load real data from HealthDataService
+      setMetrics(HealthDataService.getUserMetrics(userId));
+      setAlerts(HealthDataService.getUserAlerts(userId));
+      setGoals(HealthDataService.getUserGoals(userId));
     } catch (error) {
       console.error('Error loading health data:', error);
       Alert.alert('Error', 'Failed to load health data');
@@ -57,91 +60,32 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     }
   };
 
-  const getMockHealthData = (): Partial<HealthMetrics> => ({
-    bodyMeasurements: {
-      id: '1',
-      userId,
-      date: new Date().toISOString(),
-      weight: 75.5,
-      bodyFatPercentage: 18.5,
-      muscleMass: 58.2,
-      waterPercentage: 55.8,
-      boneDensity: 1.2,
-      waist: 82,
-      hip: 98,
-      neck: 38,
-      chest: 95,
-      biceps: 32,
-      forearms: 28,
-      thighs: 58,
-      calves: 38,
-      visceralFat: 8,
-      subcutaneousFat: 12.3,
-      leanBodyMass: 61.7,
-      bmi: 23.4,
-      waistToHipRatio: 0.84,
-      bodyFatMass: 13.8,
-      notes: '',
-      updatedAt: new Date().toISOString()
-    },
-    fastingMetrics: {
-      id: '1',
-      userId,
-      date: new Date().toISOString(),
-      fastingStartTime: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(),
-      fastingEndTime: new Date().toISOString(),
-      fastingDuration: 16,
-      isActive: false,
-      eatingWindowStart: new Date().toISOString(),
-      eatingWindowEnd: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-      eatingWindowDuration: 8,
-      ketoneLevel: 1.2,
-      ketoneType: 'blood',
-      glucoseLevel: 85,
-      hungerLevel: 2,
-      energyLevel: 4,
-      mentalClarity: 4,
-      fastingType: 'intermittent',
-      notes: 'Great energy today!',
-      updatedAt: new Date().toISOString()
-    }
-  });
+  const handleAddData = () => {
+    setShowDataEntry(true);
+    setDataInput({});
+  };
 
-  const getMockAlerts = (): MetricAlert[] => [
-    {
-      id: '1',
-      userId,
-      metricType: 'bodyMeasurements',
-      metricName: 'Weight',
-      currentValue: 75.5,
-      thresholdValue: 70,
-      alertType: 'warning',
-      message: 'Weight is above your target goal',
-      isRead: false,
-      createdAt: new Date().toISOString()
+  const handleSaveData = () => {
+    if (Object.keys(dataInput).length === 0) {
+      Alert.alert('No Data', 'Please enter some health data');
+      return;
     }
-  ];
 
-  const getMockGoals = (): HealthGoal[] => [
-    {
-      id: '1',
-      userId,
-      category: 'bodyMeasurements',
-      metricName: 'Weight',
-      targetValue: 70,
-      currentValue: 75.5,
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'high',
-      isAchieved: false,
-      progressPercentage: 45,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
+    // Save to HealthDataService
+    HealthDataService.addUserInput(userId, dataInput);
+    
+    // Reload data
+    loadHealthData();
+    
+    // Close modal
+    setShowDataEntry(false);
+    setDataInput({});
+    
+    Alert.alert('Success', 'Health data saved successfully!');
+  };
 
   const getMetricTrend = (metricName: string): MetricTrend => {
-    // TODO: Calculate actual trend from historical data
-    return 'improving';
+    return HealthDataService.getMetricTrend(userId, metricName);
   };
 
   const getTrendColor = (trend: MetricTrend): string => {
@@ -342,10 +286,46 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
       {renderTabContent()}
 
       {/* Add Metric Button */}
-      <TouchableOpacity style={styles.addButton}>
+      <TouchableOpacity style={styles.addButton} onPress={handleAddData}>
         <Plus size={24} color={colors.background} />
         <Text style={styles.addButtonText}>Add New Metric</Text>
       </TouchableOpacity>
+
+      {/* Data Entry Modal */}
+      <Modal
+        visible={showDataEntry}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDataEntry(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Enter Health Data</Text>
+              <TouchableOpacity onPress={() => setShowDataEntry(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.dataInputField}
+              placeholder="Enter your weight (kg)"
+              keyboardType="numeric"
+              value={dataInput.weight?.toString()}
+              onChangeText={(text) => setDataInput(prev => ({ ...prev, weight: parseFloat(text) || undefined }))}
+            />
+            <TextInput
+              style={styles.dataInputField}
+              placeholder="Enter your body fat percentage (%)"
+              keyboardType="numeric"
+              value={dataInput.bodyFatPercentage?.toString()}
+              onChangeText={(text) => setDataInput(prev => ({ ...prev, bodyFatPercentage: parseFloat(text) || undefined }))}
+            />
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveData}>
+              <Text style={styles.saveButtonText}>Save Data</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -632,5 +612,55 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.textSecondary,
     marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  dataInputField: {
+    width: '100%',
+    height: 60,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.inputBackground,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    width: '100%',
+  },
+  saveButtonText: {
+    color: colors.background,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

@@ -186,6 +186,7 @@ Make this recipe AMAZING - it should be something people want to cook and eat!`;
     generationConfig: {
       response_mime_type: "application/json",
       temperature: 0.8, // Creative but consistent
+      maxOutputTokens: 4000, // Ensure enough tokens for complete recipe
     },
     contents: [
       {

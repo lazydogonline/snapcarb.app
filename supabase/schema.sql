@@ -1,347 +1,273 @@
--- SnapCarb Health Companion - Supabase Database Schema
--- Run this in your Supabase SQL editor
+-- Complete USDA Food Database Schema for SnapCarb
+-- This creates all tables, views, and functions needed for food tracking
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Users table (extends Supabase auth.users)
-CREATE TABLE public.users (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  first_name TEXT,
-  last_name TEXT,
-  age INTEGER,
-  weight DECIMAL(5,2),
-  height DECIMAL(5,2),
-  goals TEXT[],
-  dietary_restrictions TEXT[],
-  fasting_window INTEGER DEFAULT 16,
-  eating_window INTEGER DEFAULT 8,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  last_login TIMESTAMP WITH TIME ZONE,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Meals table
-CREATE TABLE public.meals (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+-- 1. Core USDA Tables
+CREATE TABLE IF NOT EXISTS public.nutrients (
+  id BIGINT PRIMARY KEY,
   name TEXT NOT NULL,
-  description TEXT,
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  net_carbs DECIMAL(6,2) NOT NULL,
-  total_carbs DECIMAL(6,2),
-  fiber DECIMAL(6,2),
-  protein DECIMAL(6,2),
-  fat DECIMAL(6,2),
-  calories INTEGER,
-  ingredients TEXT[],
-  photo_url TEXT,
-  ai_analysis TEXT,
-  compliance_score INTEGER CHECK (compliance_score >= 1 AND compliance_score <= 10),
-  has_disallowed_foods BOOLEAN DEFAULT FALSE,
-  disallowed_foods TEXT[],
-  tags TEXT[],
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  unit_name TEXT NOT NULL,
+  nutrient_nbr TEXT,
+  rank INTEGER
 );
 
--- Supplements table
-CREATE TABLE public.supplements (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  name TEXT NOT NULL,
-  dosage TEXT NOT NULL,
-  frequency TEXT NOT NULL,
-  recommended_form TEXT,
-  timing TEXT,
-  target_blood_level TEXT,
-  taken BOOLEAN DEFAULT FALSE,
-  taken_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Challenge days table
-CREATE TABLE public.challenge_days (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  date DATE NOT NULL,
-  day INTEGER NOT NULL,
-  completed BOOLEAN DEFAULT FALSE,
-  meals_logged INTEGER DEFAULT 0,
-  symptoms_noted BOOLEAN DEFAULT FALSE,
-  symptoms TEXT[],
-  notes TEXT,
-  net_carbs_total DECIMAL(6,2),
-  adherence_score INTEGER,
-  mood TEXT CHECK (mood IN ('excellent', 'good', 'fair', 'poor')),
-  energy TEXT CHECK (energy IN ('high', 'medium', 'low')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, date)
-);
-
--- Events table
-CREATE TABLE public.events (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  title TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS public.foods (
+  fdc_id BIGINT PRIMARY KEY,
   description TEXT NOT NULL,
-  date TIMESTAMP WITH TIME ZONE NOT NULL,
-  time TEXT NOT NULL,
-  duration TEXT DEFAULT '1 hour',
-  type TEXT CHECK (type IN ('webinar', 'workshop', 'challenge', 'meetup', 'consultation', 'course')) DEFAULT 'webinar',
-  category TEXT DEFAULT 'general',
-  link TEXT,
-  max_participants INTEGER,
-  current_participants INTEGER DEFAULT 0,
-  is_free BOOLEAN DEFAULT TRUE,
-  price TEXT,
-  benefits TEXT[],
-  status TEXT CHECK (status IN ('upcoming', 'live', 'completed', 'cancelled')) DEFAULT 'upcoming',
-  featured BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  data_type TEXT,
+  publication_date DATE,
+  all_highlight_fields TEXT,
+  all_keywords TEXT
 );
 
--- Community posts table
-CREATE TABLE public.community_posts (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  content TEXT NOT NULL,
-  type TEXT CHECK (type IN ('story', 'progress', 'question', 'tip', 'challenge')) DEFAULT 'story',
-  tags TEXT[],
-  likes UUID[],
-  photo_url TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS public.branded_foods (
+  fdc_id BIGINT PRIMARY KEY REFERENCES public.foods(fdc_id),
+  brand_owner TEXT,
+  brand_name TEXT,
+  gtin_upc TEXT,
+  ingredients TEXT,
+  market_country TEXT,
+  modified_date DATE,
+  available_date DATE,
+  data_source TEXT,
+  serving_size DOUBLE PRECISION DEFAULT 100,
+  serving_size_unit TEXT DEFAULT 'g'
 );
 
--- Comments table (separate from posts for better structure)
-CREATE TABLE public.comments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  post_id UUID REFERENCES public.community_posts(id) ON DELETE CASCADE NOT NULL,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS public.food_nutrients (
+  fdc_id BIGINT REFERENCES public.foods(fdc_id),
+  nutrient_id BIGINT REFERENCES public.nutrients(id),
+  amount DOUBLE PRECISION NOT NULL,
+  data_points INTEGER,
+  derivation_id TEXT,
+  min DOUBLE PRECISION,
+  max DOUBLE PRECISION,
+  median DOUBLE PRECISION,
+  footnote TEXT,
+  min_year_acquired INTEGER,
+  PRIMARY KEY (fdc_id, nutrient_id)
 );
 
--- Recipes table (enhanced for AI-generated SnapCarb recipes)
-CREATE TABLE public.recipes (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
-  difficulty TEXT CHECK (difficulty IN ('Easy', 'Medium', 'Hard')) DEFAULT 'Easy',
-  prep_time INTEGER, -- in minutes
-  cook_time INTEGER, -- in minutes
-  total_time INTEGER, -- in minutes
-  servings INTEGER,
-  net_carbs DECIMAL(6,2) NOT NULL,
-  fiber DECIMAL(6,2),
-  protein DECIMAL(6,2),
-  fat DECIMAL(6,2),
-  calories INTEGER,
-  ingredients JSONB, -- Store as JSON for flexibility
-  instructions TEXT[],
-  tags TEXT[],
-  source TEXT DEFAULT 'SnapCarb Chef Collection',
-  compliance_score INTEGER CHECK (compliance_score >= 1 AND compliance_score <= 10),
-  author_id UUID REFERENCES public.users(id),
-  photo_url TEXT,
-  is_approved BOOLEAN DEFAULT FALSE,
-  is_ai_generated BOOLEAN DEFAULT FALSE,
-  ai_model TEXT DEFAULT 'gemini-1.5-flash',
-  cool_facts JSONB, -- Store cool facts as JSON
+-- 2. Recipe Tables
+CREATE TABLE IF NOT EXISTS public.recipes (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  servings INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- User recipe collections table
-CREATE TABLE public.user_recipe_collections (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  recipe_id UUID REFERENCES public.recipes(id) ON DELETE CASCADE NOT NULL,
-  is_favorite BOOLEAN DEFAULT FALSE,
-  notes TEXT,
-  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-  cooked_count INTEGER DEFAULT 0,
-  last_cooked TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, recipe_id)
-);
-
--- Recipe categories table
-CREATE TABLE public.recipe_categories (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL,
-  description TEXT,
-  icon TEXT,
-  color TEXT,
+CREATE TABLE IF NOT EXISTS public.recipe_ingredients (
+  id BIGSERIAL PRIMARY KEY,
+  recipe_id BIGINT REFERENCES public.recipes(id) ON DELETE CASCADE,
+  fdc_id BIGINT NOT NULL REFERENCES public.foods(fdc_id),
+  grams DOUBLE PRECISION NOT NULL,  -- store the amount in grams
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Recipe category assignments
-CREATE TABLE public.recipe_category_assignments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  recipe_id UUID REFERENCES public.recipes(id) ON DELETE CASCADE NOT NULL,
-  category_id UUID REFERENCES public.recipe_categories(id) ON DELETE CASCADE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(recipe_id, category_id)
-);
+-- 3. Indexes for Performance
+CREATE INDEX IF NOT EXISTS idx_nutrients_name ON public.nutrients(name);
+CREATE INDEX IF NOT EXISTS idx_foods_description ON public.foods USING gin(to_tsvector('english', description));
+CREATE INDEX IF NOT EXISTS idx_foods_publication_date ON public.foods(publication_date DESC);
+CREATE INDEX IF NOT EXISTS idx_branded_foods_barcode ON public.branded_foods(gtin_upc);
+CREATE INDEX IF NOT EXISTS idx_food_nutrients_fdc_id ON public.food_nutrients(fdc_id);
+CREATE INDEX IF NOT EXISTS idx_food_nutrients_nutrient_id ON public.food_nutrients(nutrient_id);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe_id ON public.recipe_ingredients(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_fdc_id ON public.recipe_ingredients(fdc_id);
 
--- Fasting sessions table
-CREATE TABLE public.fasting_sessions (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-  end_time TIMESTAMP WITH TIME ZONE,
-  duration DECIMAL(5,2), -- in hours
-  is_active BOOLEAN DEFAULT TRUE,
-  notes TEXT,
-  mood TEXT,
-  energy TEXT,
-  hunger TEXT CHECK (hunger IN ('none', 'mild', 'moderate', 'strong')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- 4. Nutrition Views
+-- View 1: Macros per 100g for all foods
+CREATE OR REPLACE VIEW public.v_food_macros_100g AS
+WITH ids AS (
+  SELECT
+    MAX(id) FILTER (WHERE LOWER(name) = 'energy')                              AS id_kcal,
+    MAX(id) FILTER (WHERE LOWER(name) = 'protein')                             AS id_pro,
+    MAX(id) FILTER (WHERE LOWER(name) = 'total lipid (fat)')                   AS id_fat,
+    MAX(id) FILTER (WHERE LOWER(name) = 'carbohydrate, by difference')         AS id_carb,
+    MAX(id) FILTER (WHERE LOWER(name) = 'fiber, total dietary')                AS id_fiber,
+    MAX(id) FILTER (WHERE LOWER(name) = 'total sugar alcohols')                AS id_sugar_alc,
+    MAX(id) FILTER (WHERE LOWER(name) = 'sugars, total including nleaimf')     AS id_sugar,
+    MAX(id) FILTER (WHERE LOWER(name) = 'sodium, na')                          AS id_na
+  FROM public.nutrients
+)
+SELECT
+  fn.fdc_id,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_kcal  FROM ids)) AS kcal,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_pro   FROM ids)) AS protein_g,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_fat   FROM ids)) AS fat_g,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_carb  FROM ids)) AS carb_g,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_fiber FROM ids)) AS fiber_g,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_sugar FROM ids)) AS sugar_g,
+  COALESCE(SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_sugar_alc FROM ids)),0) AS sugar_alc_g,
+  SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_na    FROM ids)) AS sodium_mg,
+  GREATEST(
+    0,
+    COALESCE(SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_carb FROM ids)),0)
+    - COALESCE(SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_fiber FROM ids)),0)
+    - COALESCE(SUM(fn.amount) FILTER (WHERE fn.nutrient_id = (SELECT id_sugar_alc FROM ids)),0)
+  ) AS net_carb_g
+FROM public.food_nutrients fn
+GROUP BY fn.fdc_id;
 
--- Row Level Security (RLS) policies
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.meals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.supplements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.challenge_days ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.community_posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+-- View 2: Macros per actual serving for branded foods
+CREATE OR REPLACE VIEW public.v_food_macros_serving AS
+SELECT
+  b.fdc_id,
+  b.serving_size,
+  b.serving_size_unit,
+  m100.kcal        * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS kcal,
+  m100.protein_g   * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS protein_g,
+  m100.fat_g       * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS fat_g,
+  m100.carb_g      * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS carb_g,
+  m100.fiber_g     * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS fiber_g,
+  m100.sugar_g     * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS sugar_g,
+  m100.sugar_alc_g * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS sugar_alc_g,
+  m100.sodium_mg   * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS sodium_mg,
+  m100.net_carb_g  * (COALESCE(NULLIF(b.serving_size,0),100)/100.0) AS net_carb_g
+FROM public.branded_foods b
+JOIN public.v_food_macros_100g m100 USING (fdc_id);
+
+-- View 3: Recipe totals with per-serving breakdown
+CREATE OR REPLACE VIEW public.v_recipe_totals AS
+WITH per_ing AS (
+  SELECT
+    ri.recipe_id,
+    ri.fdc_id,
+    ri.grams,
+    m.kcal      * (ri.grams/100.0) AS kcal,
+    m.protein_g * (ri.grams/100.0) AS protein_g,
+    m.fat_g     * (ri.grams/100.0) AS fat_g,
+    m.carb_g    * (ri.grams/100.0) AS carb_g,
+    m.fiber_g   * (ri.grams/100.0) AS fiber_g,
+    m.sugar_g   * (ri.grams/100.0) AS sugar_g,
+    m.sugar_alc_g * (ri.grams/100.0) AS sugar_alc_g,
+    m.sodium_mg * (ri.grams/100.0) AS sodium_mg,
+    m.net_carb_g * (ri.grams/100.0) AS net_carb_g
+  FROM public.recipe_ingredients ri
+  JOIN public.v_food_macros_100g m USING (fdc_id)
+)
+SELECT
+  r.id AS recipe_id,
+  r.name,
+  r.servings,
+  SUM(grams)                        AS total_grams,
+  SUM(kcal)                         AS total_kcal,
+  SUM(protein_g)                    AS total_protein_g,
+  SUM(fat_g)                        AS total_fat_g,
+  SUM(carb_g)                       AS total_carb_g,
+  SUM(fiber_g)                      AS total_fiber_g,
+  SUM(sugar_g)                      AS total_sugar_g,
+  SUM(sugar_alc_g)                  AS total_sugar_alc_g,
+  SUM(sodium_mg)                    AS total_sodium_mg,
+  SUM(net_carb_g)                   AS total_net_carb_g,
+  -- per-serving
+  ROUND(SUM(kcal)/r.servings, 1)           AS kcal_per_serving,
+  ROUND(SUM(protein_g)/r.servings, 2)      AS protein_g_per_serving,
+  ROUND(SUM(fat_g)/r.servings, 2)          AS fat_g_per_serving,
+  ROUND(SUM(carb_g)/r.servings, 2)         AS carb_g_per_serving,
+  ROUND(SUM(fiber_g)/r.servings, 2)        AS fiber_g_per_serving,
+  ROUND(SUM(net_carb_g)/r.servings, 2)     AS net_carb_g_per_serving
+FROM per_ing
+JOIN public.recipes r ON r.id = per_ing.recipe_id
+GROUP BY r.id, r.name, r.servings;
+
+-- 5. Row Level Security (RLS)
+ALTER TABLE public.nutrients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.foods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.branded_foods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.food_nutrients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_recipe_collections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.recipe_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.recipe_category_assignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fasting_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipe_ingredients ENABLE ROW LEVEL SECURITY;
 
--- Users can only access their own data
-CREATE POLICY "Users can view own profile" ON public.users
-  FOR SELECT USING (auth.uid() = id);
+-- Public read access for food data
+CREATE POLICY "Allow public read access to nutrients" ON public.nutrients FOR SELECT USING (true);
+CREATE POLICY "Allow public read access to foods" ON public.foods FOR SELECT USING (true);
+CREATE POLICY "Allow public read access to branded_foods" ON public.branded_foods FOR SELECT USING (true);
+CREATE POLICY "Allow public read access to food_nutrients" ON public.food_nutrients FOR SELECT USING (true);
 
-CREATE POLICY "Users can update own profile" ON public.users
-  FOR UPDATE USING (auth.uid() = id);
+-- Users can manage their own recipes
+CREATE POLICY "Users can manage their own recipes" ON public.recipes FOR ALL USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Users can manage their own recipe ingredients" ON public.recipe_ingredients FOR ALL USING (auth.uid() IS NOT NULL);
 
--- Meals policies
-CREATE POLICY "Users can manage own meals" ON public.meals
-  FOR ALL USING (auth.uid() = user_id);
+-- 6. Sample Data for Testing
+INSERT INTO public.nutrients (id, name, unit_name) VALUES 
+  (1008, 'Energy', 'KCAL'),
+  (1003, 'Protein', 'G'),
+  (1004, 'Total lipid (fat)', 'G'),
+  (1005, 'Carbohydrate, by difference', 'G'),
+  (1079, 'Fiber, total dietary', 'G'),
+  (1086, 'Total sugar alcohols', 'G'),
+  (2000, 'Sugars, total including NLEA', 'G'),
+  (1093, 'Sodium, Na', 'MG')
+ON CONFLICT (id) DO NOTHING;
 
--- Supplements policies
-CREATE POLICY "Users can manage own supplements" ON public.supplements
-  FOR ALL USING (auth.uid() = user_id);
+-- 7. Helper Functions
+-- Function to search foods by text
+CREATE OR REPLACE FUNCTION public.search_foods(search_term TEXT)
+RETURNS TABLE(fdc_id BIGINT, description TEXT, data_type TEXT)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT f.fdc_id, f.description, f.data_type
+  FROM public.foods f
+  WHERE to_tsvector('english', f.description) @@ plainto_tsquery(search_term)
+  ORDER BY f.publication_date DESC NULLS LAST
+  LIMIT 25;
+$$;
 
--- Challenge days policies
-CREATE POLICY "Users can manage own challenge days" ON public.challenge_days
-  FOR ALL USING (auth.uid() = user_id);
+-- Function to get macros for a food (generic)
+CREATE OR REPLACE FUNCTION public.get_food_macros_100g(food_fdc_id BIGINT)
+RETURNS TABLE(
+  fdc_id BIGINT, description TEXT, kcal DOUBLE PRECISION, 
+  protein_g DOUBLE PRECISION, fat_g DOUBLE PRECISION, carb_g DOUBLE PRECISION,
+  fiber_g DOUBLE PRECISION, sugar_g DOUBLE PRECISION, sugar_alc_g DOUBLE PRECISION,
+  sodium_mg DOUBLE PRECISION, net_carb_g DOUBLE PRECISION
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT m.*, f.description
+  FROM public.v_food_macros_100g m
+  JOIN public.foods f USING (fdc_id)
+  WHERE m.fdc_id = food_fdc_id;
+$$;
 
--- Events are public for reading
-CREATE POLICY "Anyone can view events" ON public.events
-  FOR SELECT USING (true);
+-- Function to get macros for a branded food (per serving)
+CREATE OR REPLACE FUNCTION public.get_branded_food_macros(food_fdc_id BIGINT)
+RETURNS TABLE(
+  fdc_id BIGINT, description TEXT, brand_owner TEXT, brand_name TEXT,
+  serving_size DOUBLE PRECISION, serving_size_unit TEXT,
+  kcal DOUBLE PRECISION, protein_g DOUBLE PRECISION, fat_g DOUBLE PRECISION, 
+  carb_g DOUBLE PRECISION, fiber_g DOUBLE PRECISION, sugar_g DOUBLE PRECISION,
+  sugar_alc_g DOUBLE PRECISION, sodium_mg DOUBLE PRECISION, net_carb_g DOUBLE PRECISION
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT m.*, f.description, b.brand_owner, b.brand_name, b.serving_size, b.serving_size_unit
+  FROM public.v_food_macros_serving m
+  JOIN public.foods f USING (fdc_id)
+  JOIN public.branded_foods b USING (fdc_id)
+  WHERE m.fdc_id = food_fdc_id;
+$$;
 
--- Only authenticated users can create events
-CREATE POLICY "Authenticated users can create events" ON public.events
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
--- Community posts policies
-CREATE POLICY "Anyone can view community posts" ON public.community_posts
-  FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create posts" ON public.community_posts
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own posts" ON public.community_posts
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own posts" ON public.community_posts
-  FOR DELETE USING (auth.uid() = user_id);
-
--- Comments policies
-CREATE POLICY "Anyone can view comments" ON public.comments
-  FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create comments" ON public.comments
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own comments" ON public.comments
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own comments" ON public.comments
-  FOR DELETE USING (auth.uid() = user_id);
-
--- Recipes policies
-CREATE POLICY "Anyone can view approved recipes" ON public.recipes
-  FOR SELECT USING (is_approved = true OR auth.uid() = user_id);
-
-CREATE POLICY "Authenticated users can create recipes" ON public.recipes
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own recipes" ON public.recipes
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own recipes" ON public.recipes
-  FOR DELETE USING (auth.uid() = user_id);
-
--- User recipe collections policies
-CREATE POLICY "Users can manage own recipe collections" ON public.user_recipe_collections
-  FOR ALL USING (auth.uid() = user_id);
-
--- Recipe categories are public for reading
-CREATE POLICY "Anyone can view recipe categories" ON public.recipe_categories
-  FOR SELECT USING (true);
-
--- Recipe category assignments policies
-CREATE POLICY "Users can view recipe category assignments" ON public.recipe_category_assignments
-  FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create category assignments" ON public.recipe_category_assignments
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
--- Fasting sessions policies
-CREATE POLICY "Users can manage own fasting sessions" ON public.fasting_sessions
-  FOR ALL USING (auth.uid() = user_id);
-
--- Create indexes for better performance
-CREATE INDEX idx_meals_user_id_timestamp ON public.meals(user_id, timestamp);
-CREATE INDEX idx_supplements_user_id ON public.supplements(user_id);
-CREATE INDEX idx_challenge_days_user_id_date ON public.challenge_days(user_id, date);
-CREATE INDEX idx_events_date ON public.events(date);
-CREATE INDEX idx_community_posts_created_at ON public.community_posts(created_at);
-CREATE INDEX idx_recipes_net_carbs ON public.recipes(net_carbs);
-CREATE INDEX idx_recipes_user_id ON public.recipes(user_id);
-CREATE INDEX idx_recipes_ai_generated ON public.recipes(is_ai_generated);
-CREATE INDEX idx_user_recipe_collections_user_id ON public.user_recipe_collections(user_id);
-CREATE INDEX idx_user_recipe_collections_recipe_id ON public.user_recipe_collections(recipe_id);
-CREATE INDEX idx_recipe_category_assignments_recipe_id ON public.recipe_category_assignments(recipe_id);
-CREATE INDEX idx_fasting_sessions_user_id_active ON public.fasting_sessions(user_id, is_active);
-
--- Insert sample recipe categories
-INSERT INTO public.recipe_categories (name, description, icon, color) VALUES
-('Breakfast', 'Morning meals to start your day', 'sunrise', '#FFD700'),
-('Lunch', 'Midday nourishment', 'sun', '#FFA500'),
-('Dinner', 'Evening feasts', 'moon', '#4169E1'),
-('Snacks', 'Quick bites and treats', 'coffee', '#32CD32'),
-('Fermented Foods', 'Gut-healthy probiotic recipes', 'leaf', '#8FBC8F'),
-('High Protein', 'Muscle-building meals', 'zap', '#FF6347'),
-('Low Carb', 'SnapCarb approved', 'target', '#9370DB'),
-('Quick Meals', 'Under 30 minutes', 'clock', '#20B2AA'),
-('Gourmet', 'Restaurant-quality dishes', 'star', '#FF69B4'),
-('Budget Friendly', 'Affordable ingredients', 'dollar-sign', '#90EE90');
-
--- Functions for common operations
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Triggers to automatically update updated_at
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_recipes_updated_at BEFORE UPDATE ON public.recipes
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Function to lookup food by barcode
+CREATE OR REPLACE FUNCTION public.lookup_food_by_barcode(barcode TEXT)
+RETURNS TABLE(
+  fdc_id BIGINT, description TEXT, brand_owner TEXT, brand_name TEXT, gtin_upc TEXT,
+  serving_size DOUBLE PRECISION, serving_size_unit TEXT,
+  kcal DOUBLE PRECISION, protein_g DOUBLE PRECISION, fat_g DOUBLE PRECISION, 
+  carb_g DOUBLE PRECISION, fiber_g DOUBLE PRECISION, sugar_g DOUBLE PRECISION,
+  sugar_alc_g DOUBLE PRECISION, sodium_mg DOUBLE PRECISION, net_carb_g DOUBLE PRECISION
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT m.*, f.description, b.brand_owner, b.brand_name, b.gtin_upc, b.serving_size, b.serving_size_unit
+  FROM public.branded_foods b
+  JOIN public.foods f USING (fdc_id)
+  JOIN public.v_food_macros_serving m USING (fdc_id)
+  WHERE b.gtin_upc IN (barcode, lpad(barcode,13,'0'), ltrim(barcode,'0'));
+$$;
 
 
 

@@ -1,236 +1,197 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
-import { Scan, X, AlertTriangle, CheckCircle, Info, Search } from 'lucide-react-native';
-import { colors } from '../constants/colors';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
+  TextInput,
+} from 'react-native';
+import { X, Camera as CameraIcon } from 'lucide-react-native';
+import { colors } from '../config/colors';
+import { USDANutritionService } from '../services/usda-nutrition-service';
+
+const { width, height } = Dimensions.get('window');
 
 interface ScannedProduct {
-  name: string;
-  ingredients: string[];
-  warnings: string[];
-  isSnapCarbApproved: boolean;
-  netCarbs?: number;
-  fiber?: number;
+  fdcId: string;
+  description: string;
+  calories: number;
+  net_carbs_g: number;
+  fiber_g: number;
+  protein_g: number;
+  fat_g: number;
 }
 
 export default function BarcodeScanner() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [product, setProduct] = useState<ScannedProduct | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
+  const [manualBarcode, setManualBarcode] = useState('');
 
-  const searchProduct = async () => {
-    if (!searchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a product name or barcode');
+  const handleManualBarcodeSubmit = async () => {
+    if (!manualBarcode.trim()) {
+      Alert.alert('Error', 'Please enter a barcode');
       return;
     }
 
-    setSearching(true);
-    
-    // Simulate product lookup - in real app, this would call Open Food Facts API
-    const mockProduct = await lookupProduct(searchQuery);
-    setProduct(mockProduct);
-    setSearching(false);
-  };
-
-  const lookupProduct = async (query: string): Promise<ScannedProduct> => {
-    // Mock product lookup - replace with real API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulate different products based on query
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('jerky') || lowerQuery.includes('beef')) {
-      return {
-        name: "Organic Grass-Fed Beef Jerky",
-        ingredients: ["Grass-fed beef", "Sea salt", "Black pepper", "Garlic powder"],
-        warnings: [],
-        isSnapCarbApproved: true,
-        netCarbs: 2,
-        fiber: 0
-      };
-    } else if (lowerQuery.includes('protein') || lowerQuery.includes('bar')) {
-      return {
-        name: "Protein Bar (Avoid!)",
-        ingredients: ["Whey protein", "Maltitol", "Wheat flour", "Soy lecithin", "Xanthan gum", "Potassium sorbate"],
-        warnings: [
-          "Contains wheat (hidden in many products)",
-          "Maltitol - artificial sweetener that can spike blood sugar",
-          "Soy lecithin - can irritate gut lining",
-          "Xanthan gum - stabilizer that breaks down mucous barrier",
-          "Potassium sorbate - preservative that can cause inflammation"
-        ],
-        isSnapCarbApproved: false,
-        netCarbs: 15,
-        fiber: 3
-      };
-    } else if (lowerQuery.includes('almond') || lowerQuery.includes('butter')) {
-      return {
-        name: "Sugar-Free Almond Butter",
-        ingredients: ["Dry roasted almonds", "Sea salt"],
-        warnings: [],
-        isSnapCarbApproved: true,
-        netCarbs: 3,
-        fiber: 3
-      };
-    } else if (lowerQuery.includes('yogurt') || lowerQuery.includes('greek')) {
-      return {
-        name: "Greek Yogurt (Check Ingredients!)",
-        ingredients: ["Milk", "Live cultures", "Sugar", "Modified corn starch", "Natural flavors"],
-        warnings: [
-          "Contains added sugar - can spike blood glucose",
-          "Modified corn starch - processed ingredient that may irritate gut",
-          "Natural flavors - often code for hidden MSG or other additives"
-        ],
-        isSnapCarbApproved: false,
-        netCarbs: 12,
-        fiber: 0
-      };
-    } else if (lowerQuery.includes('bread') || lowerQuery.includes('wheat')) {
-      return {
-        name: "Whole Wheat Bread (AVOID!)",
-        ingredients: ["Whole wheat flour", "Water", "Sugar", "Yeast", "Salt", "Soybean oil", "Calcium propionate"],
-        warnings: [
-          "WHEAT - Major gut irritant and mucous barrier disruptor",
-          "Sugar - spikes blood glucose and feeds harmful bacteria",
-          "Soybean oil - inflammatory omega-6 fatty acids",
-          "Calcium propionate - preservative that can cause digestive issues"
-        ],
-        isSnapCarbApproved: false,
-        netCarbs: 25,
-        fiber: 3
-      };
-    } else {
-      return {
-        name: `Product: ${query}`,
-        ingredients: ["Unknown ingredients - check label carefully"],
-        warnings: [
-          "Always read ingredient labels",
-          "Look for hidden wheat, sugar, and processed oils",
-          "Choose single-ingredient foods when possible"
-        ],
-        isSnapCarbApproved: false,
-        netCarbs: 0,
-        fiber: 0
-      };
+    setLoading(true);
+    try {
+      const product = await USDANutritionService.searchFoodsByBarcode(manualBarcode.trim());
+      if (product) {
+        setScannedProduct({
+          fdcId: product.fdcId,
+          description: product.description,
+          calories: product.calories,
+          net_carbs_g: product.net_carbs_g,
+          fiber_g: product.fiber_g,
+          protein_g: product.protein_g,
+          fat_g: product.fat_g,
+        });
+        setScanned(true);
+      } else {
+        Alert.alert('Not Found', 'No product found with this barcode. Try searching by name instead.');
+      }
+    } catch (error) {
+      console.error('Error looking up product:', error);
+      Alert.alert('Error', 'Failed to look up product. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetScanner = () => {
-    setProduct(null);
-    setSearchQuery('');
+    setScanning(false);
+    setScanned(false);
+    setScannedProduct(null);
+    setManualBarcode('');
   };
 
-  if (product) {
-    return (
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.productContainer}>
-          <View style={styles.header}>
-            <Text style={styles.productName}>{product.name}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: product.isSnapCarbApproved ? colors.primary : colors.error }]}>
-              {product.isSnapCarbApproved ? (
-                <CheckCircle size={16} color="white" />
-              ) : (
-                <AlertTriangle size={16} color="white" />
-              )}
-              <Text style={styles.statusText}>
-                {product.isSnapCarbApproved ? 'SnapCarb Approved' : 'Avoid This'}
-              </Text>
-            </View>
-          </View>
-
-          {product.netCarbs !== undefined && (
-            <View style={styles.nutritionContainer}>
-              <Text style={styles.nutritionTitle}>Nutrition (per serving)</Text>
-              <View style={styles.nutritionRow}>
-                <Text style={styles.nutritionLabel}>Net Carbs:</Text>
-                <Text style={styles.nutritionValue}>{product.netCarbs}g</Text>
-              </View>
-              {product.fiber !== undefined && (
-                <View style={styles.nutritionRow}>
-                  <Text style={styles.nutritionLabel}>Fiber:</Text>
-                  <Text style={styles.nutritionValue}>{product.fiber}g</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          <View style={styles.ingredientsContainer}>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            {product.ingredients.map((ingredient, index) => (
-              <View key={index} style={styles.ingredientRow}>
-                <CheckCircle size={16} color={colors.primary} />
-                <Text style={styles.ingredientText}>{ingredient}</Text>
-              </View>
-            ))}
-          </View>
-
-          {product.warnings.length > 0 && (
-            <View style={styles.warningsContainer}>
-              <Text style={styles.sectionTitle}>⚠️ Red Flags</Text>
-              <Text style={styles.warningSubtitle}>These ingredients can harm your gut health:</Text>
-              {product.warnings.map((warning, index) => (
-                <View key={index} style={styles.warningRow}>
-                  <AlertTriangle size={16} color={colors.error} />
-                  <Text style={styles.warningText}>{warning}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.scanAgainButton} onPress={resetScanner}>
-              <Search size={20} color={colors.primary} />
-              <Text style={styles.scanAgainText}>Search Another Product</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    );
-  }
+  const addToMeal = () => {
+    if (scannedProduct) {
+      // TODO: Integrate with meal logging system
+      Alert.alert('Success', `${scannedProduct.description} added to your meal!`);
+      resetScanner();
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.welcomeContainer}>
-        <Scan size={64} color={colors.primary} />
-        <Text style={styles.welcomeTitle}>Food Scanner</Text>
-        <Text style={styles.welcomeText}>
-          Search for food products to see if they're SnapCarb approved
-        </Text>
-        <Text style={styles.welcomeSubtext}>
-          Get instant ingredient analysis and warnings about harmful additives
-        </Text>
-        
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Enter product name or barcode..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={searchProduct}
-          />
-          <TouchableOpacity 
-            style={[styles.searchButton, searching && styles.searchButtonDisabled]} 
-            onPress={searchProduct}
-            disabled={searching}
-          >
-            {searching ? (
-              <Text style={styles.searchButtonText}>Searching...</Text>
-            ) : (
-              <>
-                <Search size={20} color="white" />
-                <Text style={styles.searchButtonText}>Search</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.tipsContainer}>
-          <Text style={styles.tipsTitle}>💡 Search Tips</Text>
-          <Text style={styles.tipText}>• Try: "beef jerky", "protein bar", "almond butter"</Text>
-          <Text style={styles.tipText}>• Look for products with simple, recognizable ingredients</Text>
-          <Text style={styles.tipText}>• Avoid products with long ingredient lists</Text>
-          <Text style={styles.tipText}>• When in doubt, choose whole, single-ingredient foods</Text>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Barcode Scanner</Text>
+        <TouchableOpacity style={styles.closeButton} onPress={resetScanner}>
+          <X size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
+
+      {!scanning && !scanned && (
+        <View style={styles.mainContent}>
+          <View style={styles.iconContainer}>
+            <CameraIcon size={64} color={colors.primary} />
+          </View>
+          
+          <Text style={styles.description}>
+            Scan product barcodes to get instant nutrition information
+          </Text>
+
+          <TouchableOpacity 
+            style={styles.scanButton}
+            onPress={() => setScanning(true)}
+          >
+            <Text style={styles.scanButtonText}>Start Camera Scanner</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Text style={styles.manualLabel}>Enter Barcode Manually</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.barcodeInput}
+              placeholder="Enter UPC/GTIN barcode"
+              value={manualBarcode}
+              onChangeText={setManualBarcode}
+              keyboardType="numeric"
+              maxLength={13}
+            />
+            <TouchableOpacity 
+              style={styles.submitButton}
+              onPress={handleManualBarcodeSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.background} size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Look Up</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {scanning && (
+        <View style={styles.cameraContainer}>
+          <View style={styles.cameraOverlay}>
+            <View style={styles.scanFrame} />
+            <Text style={styles.scanText}>
+              Camera Scanner Coming Soon!
+            </Text>
+            <Text style={styles.scanSubtext}>
+              For now, use the manual barcode entry above
+            </Text>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setScanning(false)}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {scanned && scannedProduct && (
+        <View style={styles.productContainer}>
+          <Text style={styles.productTitle}>{scannedProduct.description}</Text>
+          
+          <View style={styles.nutritionGrid}>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{scannedProduct.calories}</Text>
+              <Text style={styles.nutritionLabel}>Calories</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{scannedProduct.net_carbs_g}g</Text>
+              <Text style={styles.nutritionLabel}>Net Carbs</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{scannedProduct.fiber_g}g</Text>
+              <Text style={styles.nutritionLabel}>Fiber</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{scannedProduct.protein_g}g</Text>
+              <Text style={styles.nutritionLabel}>Protein</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{scannedProduct.fat_g}g</Text>
+              <Text style={styles.nutritionLabel}>Fat</Text>
+            </View>
+          </View>
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.addButton} onPress={addToMeal}>
+              <Text style={styles.addButtonText}>Add to Meal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.scanAgainButton} onPress={resetScanner}>
+              <Text style={styles.scanAgainButtonText}>Scan Another</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -240,207 +201,211 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  welcomeContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 24,
-  },
-  welcomeSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 20,
-  },
-  searchContainer: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  searchInput: {
-    backgroundColor: colors.cardBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
-    color: colors.text,
-  },
-  searchButton: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  searchButtonDisabled: {
-    backgroundColor: colors.textSecondary,
-  },
-  searchButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 10,
-  },
-  tipsContainer: {
-    backgroundColor: colors.cardBackground,
-    padding: 20,
-    borderRadius: 16,
-    width: '100%',
-  },
-  tipsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  tipText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  productContainer: {
-    padding: 20,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  productName: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  mainContent: {
     flex: 1,
-    marginRight: 15,
-  },
-  statusBadge: {
-    flexDirection: 'row',
+    padding: 20,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    justifyContent: 'center',
   },
-  statusText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  nutritionContainer: {
-    backgroundColor: colors.cardBackground,
-    padding: 15,
-    borderRadius: 12,
+  iconContainer: {
     marginBottom: 20,
   },
-  nutritionTitle: {
+  description: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  scanButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    marginBottom: 30,
+  },
+  scanButtonText: {
+    color: colors.background,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
-    marginBottom: 10,
   },
-  nutritionRow: {
+  divider: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
+    alignItems: 'center',
+    marginVertical: 20,
+    width: '100%',
   },
-  nutritionLabel: {
-    fontSize: 14,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 15,
     color: colors.textSecondary,
-  },
-  nutritionValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
   },
-  ingredientsContainer: {
-    backgroundColor: colors.cardBackground,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  manualLabel: {
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 15,
   },
-  ingredientRow: {
+  inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    width: '100%',
+    gap: 10,
   },
-  ingredientText: {
-    fontSize: 14,
-    color: colors.text,
-    marginLeft: 10,
-  },
-  warningsContainer: {
-    backgroundColor: colors.errorBackground,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.error,
-  },
-  warningSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 10,
-    fontStyle: 'italic',
-  },
-  warningRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 14,
-    color: colors.text,
-    marginLeft: 10,
+  barcodeInput: {
     flex: 1,
-    lineHeight: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
-  actionsContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  scanAgainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 25,
+  submitButton: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 20,
     paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  submitButtonText: {
+    color: colors.background,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  cameraOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  scanFrame: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: 20,
+    marginBottom: 30,
+  },
+  scanText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  scanSubtext: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
     borderRadius: 25,
   },
-  scanAgainText: {
-    color: 'white',
+  backButtonText: {
+    color: colors.background,
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+  },
+  productContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  productTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 28,
+  },
+  nutritionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+  },
+  nutritionItem: {
+    width: '48%',
+    backgroundColor: colors.surface,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  nutritionValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 5,
+  },
+  nutritionLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  addButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scanAgainButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scanAgainButtonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
+
+

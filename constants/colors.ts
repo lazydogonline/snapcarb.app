@@ -22,6 +22,7 @@ export const colors = {
   errorBackground: '#FEF2F2',
   warningBackground: '#FFFBEB',
   infoBackground: '#EFF6FF',
+  inputBackground: '#F9FAFB',
   
   // Legacy colors for compatibility
   light: {

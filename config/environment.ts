@@ -9,6 +9,13 @@ export const config = {
     model: 'gemini-1.5-flash',
   },
 
+  // USDA Nutrition Database API Configuration
+  usda: {
+    apiKey: process.env.EXPO_PUBLIC_USDA_API_KEY || '',
+    baseUrl: 'https://api.nal.usda.gov/fdc/v1',
+    maxRequestsPerDay: 10000, // Standard USDA API limit
+  },
+
   // Backend API Configuration
   api: {
     baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000',

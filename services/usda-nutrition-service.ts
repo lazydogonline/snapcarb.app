@@ -1,3 +1,5 @@
+import { supabase } from '../config/supabase';
+
 export interface USDANutrition {
   fdcId: string;
   description: string;
@@ -19,71 +21,131 @@ export interface USDAFoodSearchResult {
 }
 
 export class USDANutritionService {
-  private static readonly API_BASE = 'https://api.nal.usda.gov/fdc/v1';
-  private static readonly API_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY || 'DEMO_KEY';
-  
   /**
-   * Search for foods in the USDA database
+   * Search for foods in the local USDA database
    */
   static async searchFoods(query: string, limit: number = 25): Promise<USDAFoodSearchResult[]> {
     try {
-      const response = await fetch(
-        `${this.API_BASE}/foods/search?api_key=${this.API_KEY}&query=${encodeURIComponent(query)}&pageSize=${limit}&dataType=Foundation,SR Legacy`
-      );
+      console.log(`USDA Service: Searching for "${query}" in local database`);
       
-      if (!response.ok) {
-        throw new Error(`USDA API error: ${response.status}`);
+      // Use the database function for efficient search
+      const { data, error } = await supabase.rpc('search_usda_foods', {
+        search_query: query,
+        food_type: 'both',
+        limit_count: limit
+      });
+      
+      if (error) {
+        console.error('Error searching USDA foods:', error);
+        return [];
       }
       
-      const data = await response.json();
-      return data.foods?.map((food: any) => ({
-        fdcId: food.fdcId,
-        description: food.description,
-        brandOwner: food.brandOwner,
-        ingredients: food.ingredients
-      })) || [];
+      if (!data || data.length === 0) {
+        console.log('No foods found in local database');
+        return [];
+      }
+      
+      // Convert to our interface format
+      const results: USDAFoodSearchResult[] = data.map((item: any) => ({
+        fdcId: item.fdc_id,
+        description: item.description,
+        brandOwner: item.brand_owner,
+        ingredients: undefined // Not available in search results
+      }));
+      
+      console.log(`Found ${results.length} foods in local database`);
+      return results;
+      
     } catch (error) {
-      console.error('USDA search error:', error);
+      console.error('Error searching USDA foods:', error);
       return [];
     }
   }
   
   /**
-   * Get detailed nutrition for a specific food
+   * Get detailed nutrition for a specific food from local database
    */
   static async getFoodNutrition(fdcId: string): Promise<USDANutrition | null> {
     try {
-      const response = await fetch(
-        `${this.API_BASE}/food/${fdcId}?api_key=${this.API_KEY}`
-      );
+      console.log(`USDA Service: Getting nutrition for FDC ID: ${fdcId}`);
       
-      if (!response.ok) {
-        throw new Error(`USDA API error: ${response.status}`);
+      // Use the database function to get nutrition
+      const { data, error } = await supabase.rpc('get_usda_nutrition', {
+        fdc_id_param: fdcId
+      });
+      
+      if (error) {
+        console.error('Error getting USDA nutrition:', error);
+        return null;
       }
       
-      const data = await response.json();
+      if (!data || data.length === 0) {
+        console.log('No nutrition data found for FDC ID:', fdcId);
+        return null;
+      }
       
-      // Extract nutrition data from USDA response
-      const nutrients = data.foodNutrients || [];
+      const nutritionData = data[0];
       
+      // Convert to our interface format
       const nutrition: USDANutrition = {
-        fdcId: data.fdcId,
-        description: data.description,
-        calories: this.extractNutrient(nutrients, 'Energy', 'kcal') || 0,
-        protein_g: this.extractNutrient(nutrients, 'Protein', 'g') || 0,
-        fat_g: this.extractNutrient(nutrients, 'Total lipid (fat)', 'g') || 0,
-        total_carbs_g: this.extractNutrient(nutrients, 'Carbohydrate, by difference', 'g') || 0,
-        fiber_g: this.extractNutrient(nutrients, 'Fiber, total dietary', 'g') || 0,
-        serving_size: 100, // USDA data is per 100g
-        serving_unit: 'g'
+        fdcId: nutritionData.fdc_id,
+        description: nutritionData.description,
+        calories: nutritionData.calories || 0,
+        protein_g: nutritionData.protein_g || 0,
+        fat_g: nutritionData.fat_g || 0,
+        total_carbs_g: nutritionData.total_carbs_g || 0,
+        fiber_g: nutritionData.fiber_g || 0,
+        net_carbs_g: nutritionData.net_carbs_g || 0,
+        serving_size: nutritionData.serving_size || 100,
+        serving_unit: nutritionData.serving_unit || 'g'
       };
       
-      // Calculate net carbs
-      nutrition.net_carbs_g = Math.max(0, nutrition.total_carbs_g - nutrition.fiber_g);
-      
+      console.log('Retrieved nutrition data:', nutrition);
       return nutrition;
+      
     } catch (error) {
-      console.error('USDA nutrition error:', error);
+      console.error('Error getting USDA nutrition:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Search for foods by barcode (UPC/GTIN)
+   */
+  static async searchFoodsByBarcode(barcode: string): Promise<USDANutrition | null> {
+    try {
+      console.log(`USDA Service: Searching for barcode: ${barcode}`);
+      
+      const { data, error } = await supabase
+        .from('usda_branded_foods')
+        .select('*')
+        .eq('gtin_upc', barcode)
+        .single();
+      
+      if (error || !data) {
+        console.log('No branded food found for barcode:', barcode);
+        return null;
+      }
+      
+      // Convert to our interface format
+      const nutrition: USDANutrition = {
+        fdcId: data.fdc_id,
+        description: data.description,
+        calories: data.calories || 0,
+        protein_g: data.protein_g || 0,
+        fat_g: data.fat_g || 0,
+        total_carbs_g: data.total_carbs_g || 0,
+        fiber_g: data.fiber_g || 0,
+        net_carbs_g: data.net_carbs_g || 0,
+        serving_size: data.serving_size || 100,
+        serving_unit: data.serving_unit || 'g'
+      };
+      
+      console.log('Found branded food by barcode:', nutrition);
+      return nutrition;
+      
+    } catch (error) {
+      console.error('Error searching foods by barcode:', error);
       return null;
     }
   }
@@ -152,17 +214,6 @@ export class USDANutritionService {
   }
   
   /**
-   * Extract nutrient value from USDA response
-   */
-  private static extractNutrient(nutrients: any[], name: string, unit: string): number | null {
-    const nutrient = nutrients.find(n => 
-      n.nutrientName?.toLowerCase().includes(name.toLowerCase()) && 
-      n.unitName === unit
-    );
-    return nutrient?.value || null;
-  }
-  
-  /**
    * Parse ingredient amounts (e.g., "100g", "1 cup", "2 tbsp")
    */
   private static parseAmount(amount: string): { value: number; unit: string } {
@@ -193,5 +244,34 @@ export class USDANutritionService {
     // Default to grams if no unit specified
     const numericValue = parseFloat(amount.replace(/[^\d.]/g, ''));
     return { value: numericValue || 100, unit: 'g' };
+  }
+  
+  /**
+   * Get database statistics
+   */
+  static async getDatabaseStats(): Promise<{
+    foundationFoods: number;
+    brandedFoods: number;
+    totalFoods: number;
+  }> {
+    try {
+      const [foundationCount, brandedCount] = await Promise.all([
+        supabase.from('usda_foundation_foods').select('*', { count: 'exact', head: true }),
+        supabase.from('usda_branded_foods').select('*', { count: 'exact', head: true })
+      ]);
+      
+      return {
+        foundationFoods: foundationCount.count || 0,
+        brandedFoods: brandedCount.count || 0,
+        totalFoods: (foundationCount.count || 0) + (brandedCount.count || 0)
+      };
+    } catch (error) {
+      console.error('Error getting database stats:', error);
+      return {
+        foundationFoods: 0,
+        brandedFoods: 0,
+        totalFoods: 0
+      };
+    }
   }
 }
