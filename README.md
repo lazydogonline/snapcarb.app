@@ -2,6 +2,16 @@
 
 **The Ultimate AI-Powered Health & Nutrition Tracking App**
 
+## 📄 **License**
+
+**SnapCarb © 2025. Licensed under GNU AGPLv3.**
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+**Commercial use without permission is prohibited.** Anyone who uses, modifies, or distributes this code must also make their derivative work open-source under the same license.
+
+For full license details, see [LICENSE](LICENSE) file.
+
 A revolutionary cross-platform mobile app built with React Native and Expo, designed to be your personal health companion for Dr. William Davis's Infinite Health program. Now with cutting-edge AI technology, advanced analytics, and intelligent insights.
 
 ## ✨ **What Makes SnapCarb Superior**

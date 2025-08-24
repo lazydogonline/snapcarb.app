@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Activity, 
@@ -13,8 +13,7 @@ import {
   Share2,
   BarChart3,
   Calendar,
-  Trophy,
-  X
+  Trophy
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { 
@@ -24,7 +23,6 @@ import {
   MetricAlert, 
   HealthGoal 
 } from '../types/health-metrics';
-import HealthDataService, { HealthDataInput } from '../services/health-data-service';
 
 const { width } = Dimensions.get('window');
 
@@ -38,8 +36,6 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [goals, setGoals] = useState<HealthGoal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDataEntry, setShowDataEntry] = useState(false);
-  const [dataInput, setDataInput] = useState<HealthDataInput>({});
 
   useEffect(() => {
     loadHealthData();
@@ -48,10 +44,11 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const loadHealthData = async () => {
     try {
       setLoading(true);
-      // Load real data from HealthDataService
-      setMetrics(HealthDataService.getUserMetrics(userId));
-      setAlerts(HealthDataService.getUserAlerts(userId));
-      setGoals(HealthDataService.getUserGoals(userId));
+      // TODO: Load actual data from Supabase
+      // For now, using mock data
+      setMetrics(getMockHealthData());
+      setAlerts(getMockAlerts());
+      setGoals(getMockGoals());
     } catch (error) {
       console.error('Error loading health data:', error);
       Alert.alert('Error', 'Failed to load health data');
@@ -60,32 +57,91 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     }
   };
 
-  const handleAddData = () => {
-    setShowDataEntry(true);
-    setDataInput({});
-  };
-
-  const handleSaveData = () => {
-    if (Object.keys(dataInput).length === 0) {
-      Alert.alert('No Data', 'Please enter some health data');
-      return;
+  const getMockHealthData = (): Partial<HealthMetrics> => ({
+    bodyMeasurements: {
+      id: '1',
+      userId,
+      date: new Date().toISOString(),
+      weight: 75.5,
+      bodyFatPercentage: 18.5,
+      muscleMass: 58.2,
+      waterPercentage: 55.8,
+      boneDensity: 1.2,
+      waist: 82,
+      hip: 98,
+      neck: 38,
+      chest: 95,
+      biceps: 32,
+      forearms: 28,
+      thighs: 58,
+      calves: 38,
+      visceralFat: 8,
+      subcutaneousFat: 12.3,
+      leanBodyMass: 61.7,
+      bmi: 23.4,
+      waistToHipRatio: 0.84,
+      bodyFatMass: 13.8,
+      notes: '',
+      updatedAt: new Date().toISOString()
+    },
+    fastingMetrics: {
+      id: '1',
+      userId,
+      date: new Date().toISOString(),
+      fastingStartTime: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(),
+      fastingEndTime: new Date().toISOString(),
+      fastingDuration: 16,
+      isActive: false,
+      eatingWindowStart: new Date().toISOString(),
+      eatingWindowEnd: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+      eatingWindowDuration: 8,
+      ketoneLevel: 1.2,
+      ketoneType: 'blood',
+      glucoseLevel: 85,
+      hungerLevel: 2,
+      energyLevel: 4,
+      mentalClarity: 4,
+      fastingType: 'intermittent',
+      notes: 'Great energy today!',
+      updatedAt: new Date().toISOString()
     }
+  });
 
-    // Save to HealthDataService
-    HealthDataService.addUserInput(userId, dataInput);
-    
-    // Reload data
-    loadHealthData();
-    
-    // Close modal
-    setShowDataEntry(false);
-    setDataInput({});
-    
-    Alert.alert('Success', 'Health data saved successfully!');
-  };
+  const getMockAlerts = (): MetricAlert[] => [
+    {
+      id: '1',
+      userId,
+      metricType: 'bodyMeasurements',
+      metricName: 'Weight',
+      currentValue: 75.5,
+      thresholdValue: 70,
+      alertType: 'warning',
+      message: 'Weight is above your target goal',
+      isRead: false,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  const getMockGoals = (): HealthGoal[] => [
+    {
+      id: '1',
+      userId,
+      category: 'bodyMeasurements',
+      metricName: 'Weight',
+      targetValue: 70,
+      currentValue: 75.5,
+      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'high',
+      isAchieved: false,
+      progressPercentage: 45,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
 
   const getMetricTrend = (metricName: string): MetricTrend => {
-    return HealthDataService.getMetricTrend(userId, metricName);
+    // TODO: Calculate actual trend from historical data
+    return 'improving';
   };
 
   const getTrendColor = (trend: MetricTrend): string => {
@@ -199,12 +255,90 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     </View>
   );
 
+  const renderDRDavisMarkers = () => (
+    <View style={styles.tabContent}>
+      {/* DR Davis Program Overview */}
+      <View style={styles.drDavisOverview}>
+        <LinearGradient colors={['#10B981', '#059669']} style={styles.drDavisCard}>
+          <Text style={styles.drDavisTitle}>DR Davis Infinite Health Program</Text>
+          <Text style={styles.drDavisSubtitle}>Focus on NET CARBS, not calories!</Text>
+          <View style={styles.drDavisPrinciple}>
+            <Text style={styles.drDavisPrincipleText}>🎯 15g Net Carbs per meal maximum</Text>
+            <Text style={styles.drDavisPrincipleText}>💪 Fat is your friend</Text>
+            <Text style={styles.drDavisPrincipleText}>🥗 Real foods only</Text>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Critical Health Markers */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Critical Health Markers</Text>
+        <View style={styles.metricsGrid}>
+          {renderMetricCard('Fasting Glucose', '85', 'mg/dL', getMetricTrend('fastingGlucose'), <Droplets size={20} color={colors.primary} />)}
+          {renderMetricCard('HbA1c', '5.2', '%', getMetricTrend('hba1c'), <Target size={20} color={colors.primary} />)}
+          {renderMetricCard('Blood Pressure', '115/75', 'mmHg', getMetricTrend('systolicBP'), <Heart size={20} color={colors.primary} />)}
+          {renderMetricCard('Triglycerides', '45', 'mg/dL', getMetricTrend('triglycerides'), <Activity size={20} color={colors.primary} />)}
+        </View>
+      </View>
+
+      {/* Supplement Tracking */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Daily Supplements</Text>
+        <View style={styles.supplementGrid}>
+          <View style={styles.supplementItem}>
+            <Text style={styles.supplementName}>Vitamin D</Text>
+            <Text style={styles.supplementDose}>4000-6000 IU</Text>
+            <View style={[styles.supplementStatus, { backgroundColor: colors.success }]}>
+              <Text style={styles.supplementStatusText}>✓ Taken</Text>
+            </View>
+          </View>
+          <View style={styles.supplementItem}>
+            <Text style={styles.supplementName}>Fish Oil</Text>
+            <Text style={styles.supplementDose}>3000-3600 mg</Text>
+            <View style={[styles.supplementStatus, { backgroundColor: colors.warning }]}>
+              <Text style={styles.supplementStatusText}>⚠️ Pending</Text>
+            </View>
+          </View>
+          <View style={styles.supplementItem}>
+            <Text style={styles.supplementName}>Magnesium</Text>
+            <Text style={styles.supplementDose}>400-500 mg</Text>
+            <View style={[styles.supplementStatus, { backgroundColor: colors.error }]}>
+              <Text style={styles.supplementStatusText}>✗ Not Taken</Text>
+            </View>
+          </View>
+          <View style={styles.supplementItem}>
+            <Text style={styles.supplementName}>Iodine</Text>
+            <Text style={styles.supplementDose}>500 mcg</Text>
+            <View style={[styles.supplementStatus, { backgroundColor: colors.warning }]}>
+              <Text style={styles.supplementStatusText}>⚠️ Pending</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Prebiotic Fiber Tracking */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Prebiotic Fiber Challenge</Text>
+        <View style={styles.fiberCard}>
+          <Text style={styles.fiberTarget}>Target: 20g per day</Text>
+          <Text style={styles.fiberCurrent}>Current: 15g</Text>
+          <View style={styles.fiberProgress}>
+            <View style={[styles.fiberProgressBar, { width: '75%' }]} />
+          </View>
+          <Text style={styles.fiberTip}>💡 Add inulin to coffee, raw potato to salads</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'bodyMeasurements':
         return renderBodyMeasurements();
       case 'fastingMetrics':
         return renderFastingMetrics();
+      case 'drDavisMarkers':
+        return renderDRDavisMarkers();
       default:
         return (
           <View style={styles.tabContent}>
@@ -279,6 +413,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
         {renderTabButton('bloodWork', 'Blood', <Droplets size={20} color={activeTab === 'bloodWork' ? colors.primary : colors.textSecondary} />)}
         {renderTabButton('vitalSigns', 'Vitals', <Heart size={20} color={activeTab === 'vitalSigns' ? colors.primary : colors.textSecondary} />)}
         {renderTabButton('fastingMetrics', 'Fasting', <Activity size={20} color={activeTab === 'fastingMetrics' ? colors.primary : colors.textSecondary} />)}
+        {renderTabButton('drDavisMarkers', 'DR Davis', <Target size={20} color={activeTab === 'drDavisMarkers' ? colors.primary : colors.textSecondary} />)}
         {renderTabButton('lifestyleMetrics', 'Lifestyle', <BarChart3 size={20} color={activeTab === 'lifestyleMetrics' ? colors.primary : colors.textSecondary} />)}
       </View>
 
@@ -286,46 +421,10 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
       {renderTabContent()}
 
       {/* Add Metric Button */}
-      <TouchableOpacity style={styles.addButton} onPress={handleAddData}>
+      <TouchableOpacity style={styles.addButton}>
         <Plus size={24} color={colors.background} />
         <Text style={styles.addButtonText}>Add New Metric</Text>
       </TouchableOpacity>
-
-      {/* Data Entry Modal */}
-      <Modal
-        visible={showDataEntry}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDataEntry(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Enter Health Data</Text>
-              <TouchableOpacity onPress={() => setShowDataEntry(false)}>
-                <X size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.dataInputField}
-              placeholder="Enter your weight (kg)"
-              keyboardType="numeric"
-              value={dataInput.weight?.toString()}
-              onChangeText={(text) => setDataInput(prev => ({ ...prev, weight: parseFloat(text) || undefined }))}
-            />
-            <TextInput
-              style={styles.dataInputField}
-              placeholder="Enter your body fat percentage (%)"
-              keyboardType="numeric"
-              value={dataInput.bodyFatPercentage?.toString()}
-              onChangeText={(text) => setDataInput(prev => ({ ...prev, bodyFatPercentage: parseFloat(text) || undefined }))}
-            />
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveData}>
-              <Text style={styles.saveButtonText}>Save Data</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -613,54 +712,117 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 16,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
+  
+  // DR Davis Markers Styles
+  drDavisOverview: {
     marginBottom: 20,
   },
-  modalTitle: {
+  drDavisCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+  },
+  drDavisTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text,
-  },
-  dataInputField: {
-    width: '100%',
-    height: 60,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.inputBackground,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 12,
-    width: '100%',
-  },
-  saveButtonText: {
     color: colors.background,
-    fontSize: 18,
-    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  drDavisSubtitle: {
+    fontSize: 16,
+    color: colors.background,
+    textAlign: 'center',
+    marginBottom: 16,
+    opacity: 0.9,
+  },
+  drDavisPrinciple: {
+    alignItems: 'center',
+  },
+  drDavisPrincipleText: {
+    fontSize: 14,
+    color: colors.background,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  supplementGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  supplementItem: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 16,
+    width: '48%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  supplementName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  supplementDose: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  supplementStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  supplementStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.background,
+  },
+  fiberCard: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fiberTarget: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  fiberCurrent: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  fiberProgress: {
+    height: 8,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  fiberProgressBar: {
+    height: '100%',
+    backgroundColor: colors.success,
+    width: '75%',
+  },
+  fiberTip: {
+    fontSize: 14,
+    color: colors.primary,
+    fontStyle: 'italic',
     textAlign: 'center',
   },
 });

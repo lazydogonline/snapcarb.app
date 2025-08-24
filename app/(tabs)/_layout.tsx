@@ -1,6 +1,35 @@
 import { Tabs } from "expo-router";
-import { Home, Utensils, Activity, Pill, Target, Calendar, ShoppingBag } from "lucide-react-native";
+import { Home, Utensils, Activity, ShoppingBag, User, Target, Heart, Calendar } from "lucide-react-native";
 import React from "react";
+import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+// import { useAuth } from "@/hooks/auth-context";
+import { useRouter } from "expo-router";
+import { colors } from "@/constants/colors";
+
+function ProfileButton() {
+  // const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  // if (!user) {
+    return (
+      <TouchableOpacity 
+        style={styles.profileButton}
+        onPress={() => router.push('/login')}
+      >
+        <Text style={styles.profileButtonText}>Sign In</Text>
+      </TouchableOpacity>
+    );
+  // }
+
+  // return (
+  //   <TouchableOpacity 
+  //     style={styles.profileButton}
+  //     onPress={() => router.push('/profile')}
+  //   >
+  //     <User size={20} color={colors.cardBackground} />
+  //   </TouchableOpacity>
+  // );
+}
 
 export default function TabLayout() {
   return (
@@ -8,7 +37,15 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: "#22c55e",
         tabBarInactiveTintColor: "#6b7280",
-        headerShown: false,
+        headerShown: true,
+        headerRight: () => <ProfileButton />,
+        headerStyle: {
+          backgroundColor: colors.primary,
+        },
+        headerTintColor: colors.cardBackground,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
         tabBarStyle: {
           backgroundColor: "#ffffff",
           borderTopWidth: 1,
@@ -27,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "SnapCarb",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
@@ -46,10 +83,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="supplements"
+        name="dr-davis-products"
         options={{
-          title: "Supplements",
-          tabBarIcon: ({ color, size }) => <Pill color={color} size={size} />,
+          title: "Products",
+          tabBarIcon: ({ color, size }) => <ShoppingBag color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -60,19 +97,34 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="supplements"
+        options={{
+          title: "Supplements",
+          tabBarIcon: ({ color, size }) => <Heart color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="events"
         options={{
           title: "Events",
           tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
         }}
       />
-      <Tabs.Screen
-        name="dr-davis-products"
-        options={{
-          title: "Products",
-          tabBarIcon: ({ color, size }) => <ShoppingBag color={color} size={size} />,
-        }}
-      />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  profileButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 16,
+  },
+  profileButtonText: {
+    color: colors.cardBackground,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+});

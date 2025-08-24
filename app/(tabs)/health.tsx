@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Activity, Share2, Users } from 'lucide-react-native';
+import { Activity, Share2, Users, Moon } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import HealthDashboard from '../../components/HealthDashboard';
 import ProgressSharing from '../../components/ProgressSharing';
 import ReferralSystem from '../../components/ReferralSystem';
+import SleepTracker from '../../components/SleepTracker';
 
-type HealthTab = 'dashboard' | 'progress' | 'referrals';
+type HealthTab = 'dashboard' | 'progress' | 'referrals' | 'sleep';
 
 export default function HealthScreen() {
   const [activeTab, setActiveTab] = useState<HealthTab>('dashboard');
@@ -105,6 +106,8 @@ export default function HealthScreen() {
         );
       case 'referrals':
         return <ReferralSystem />;
+      case 'sleep':
+        return <SleepTracker />;
       default:
         return <HealthDashboard userId="user-123" />;
     }
@@ -126,6 +129,7 @@ export default function HealthScreen() {
         {renderTabButton('dashboard', 'Dashboard', <Activity size={20} color={activeTab === 'dashboard' ? colors.background : colors.textSecondary} />)}
         {renderTabButton('progress', 'Progress', <Share2 size={20} color={activeTab === 'progress' ? colors.background : colors.textSecondary} />)}
         {renderTabButton('referrals', 'Referrals', <Users size={20} color={activeTab === 'referrals' ? colors.background : colors.textSecondary} />)}
+        {renderTabButton('sleep', 'Sleep', <Moon size={20} color={activeTab === 'sleep' ? colors.background : colors.textSecondary} />)}
       </View>
 
       {/* Tab Content */}

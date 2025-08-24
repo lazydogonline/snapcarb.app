@@ -1,5 +1,5 @@
 import { estimateCarbsFromImage, generateSnapCarbRecipe } from './gemini-ai-service';
-import { USDANutritionService } from './usda-nutrition-service';
+import { FoodSearchService } from './food-search-service';
 
 export interface SnapCarbRecipe {
   id: string;
@@ -59,6 +59,38 @@ export class RecipeService {
         throw new Error('AI generated incomplete recipe');
       }
       
+      // Calculate REAL nutrition data from USDA database
+      try {
+        const realNutrition = await this.calculateRecipeNutrition(
+          recipe.ingredients.map(ing => ({ name: ing.name, amount: ing.amount })),
+          recipe.servings
+        );
+        
+        // Update the recipe with real nutrition data
+        recipe.nutrition = {
+          calories: realNutrition.calories,
+          protein: realNutrition.protein_g,
+          fat: realNutrition.fat_g,
+          fiber: realNutrition.fiber_g,
+          netCarbs: realNutrition.net_carbs_g
+        };
+        
+        // Update the netCarbs field to match
+        recipe.netCarbs = realNutrition.net_carbs_g;
+        
+        // Update ingredient nutrition data
+        recipe.ingredients = recipe.ingredients.map(ing => ({
+          ...ing,
+          net_carbs_g: 0, // Will be calculated per ingredient if needed
+          fiber_g: 0
+        }));
+        
+        console.log('✅ Recipe nutrition updated with real USDA data:', realNutrition);
+      } catch (nutritionError) {
+        console.warn('⚠️ Could not calculate real nutrition, using AI estimates:', nutritionError);
+        // Keep the AI-generated nutrition if database lookup fails
+      }
+      
       return recipe;
     } catch (error) {
       console.error('Error generating recipe with AI:', error);
@@ -84,7 +116,7 @@ export class RecipeService {
   }
 
   /**
-   * Calculate accurate nutrition for a recipe using USDA data
+   * Calculate accurate nutrition for a recipe using USDA data from Supabase
    */
   static async calculateRecipeNutrition(ingredients: Array<{
     name: string;
@@ -109,27 +141,39 @@ export class RecipeService {
     // Get nutrition for each ingredient
     for (const ingredient of ingredients) {
       try {
-        // Search USDA database for the ingredient
-        const searchResults = await USDANutritionService.searchFoods(ingredient.name, 1);
+        // Search USDA database for the ingredient using our FoodSearchService
+        const searchResults = await FoodSearchService.searchFoods(ingredient.name);
         
         if (searchResults.length > 0) {
-          // Get detailed nutrition for the first (best) match
-          const nutrition = await USDANutritionService.getFoodNutrition(searchResults[0].fdcId);
+          // Get the first (best) match
+          const food = searchResults[0];
           
-          if (nutrition) {
-            // Calculate nutrition for the specific amount
-            const ingredientNutrition = USDANutritionService.calculateIngredientNutrition(
-              ingredient.name,
-              ingredient.amount,
-              nutrition
-            );
-            
-            nutritionData.push({
-              name: ingredient.name,
-              amount: ingredient.amount,
-              ...ingredientNutrition
-            });
-          }
+          // Parse the amount to get grams (assuming most amounts are in grams)
+          const grams = this.parseAmountToGrams(ingredient.amount);
+          
+          // Calculate nutrition for the specific amount (per 100g basis)
+          const ingredientNutrition = {
+            name: ingredient.name,
+            amount: ingredient.amount,
+            net_carbs_g: (food.nutrition.net_carbs * grams) / 100,
+            fiber_g: (food.nutrition.fiber * grams) / 100,
+            calories: (food.nutrition.calories * grams) / 100,
+            protein_g: (food.nutrition.protein * grams) / 100,
+            fat_g: (food.nutrition.fat * grams) / 100
+          };
+          
+          nutritionData.push(ingredientNutrition);
+        } else {
+          // Use fallback values if ingredient not found
+          nutritionData.push({
+            name: ingredient.name,
+            amount: ingredient.amount,
+            net_carbs_g: 0,
+            fiber_g: 0,
+            calories: 0,
+            protein_g: 0,
+            fat_g: 0
+          });
         }
       } catch (error) {
         console.error(`Error getting nutrition for ${ingredient.name}:`, error);
@@ -147,6 +191,63 @@ export class RecipeService {
     }
 
     // Calculate total recipe nutrition
-    return USDANutritionService.calculateRecipeNutrition(nutritionData, servings);
+    const totals = nutritionData.reduce((acc, ingredient) => ({
+      net_carbs_g: acc.net_carbs_g + ingredient.net_carbs_g,
+      fiber_g: acc.fiber_g + ingredient.fiber_g,
+      calories: acc.calories + ingredient.calories,
+      protein_g: acc.protein_g + ingredient.protein_g,
+      fat_g: acc.fat_g + ingredient.fat_g
+    }), {
+      net_carbs_g: 0,
+      fiber_g: 0,
+      calories: 0,
+      protein_g: 0,
+      fat_g: 0
+    });
+
+    // Return per-serving nutrition
+    return {
+      net_carbs_g: Math.round((totals.net_carbs_g / servings) * 100) / 100,
+      fiber_g: Math.round((totals.fiber_g / servings) * 100) / 100,
+      calories: Math.round((totals.calories / servings) * 100) / 100,
+      protein_g: Math.round((totals.protein_g / servings) * 100) / 100,
+      fat_g: Math.round((totals.fat_g / servings) * 100) / 100
+    };
+  }
+
+  /**
+   * Parse ingredient amount to grams for nutrition calculation
+   */
+  private static parseAmountToGrams(amount: string): number {
+    // Default to 100g if we can't parse the amount
+    if (!amount) return 100;
+    
+    const amountStr = amount.toLowerCase().trim();
+    
+    // Try to extract numeric value
+    const numericMatch = amountStr.match(/(\d+(?:\.\d+)?)/);
+    if (!numericMatch) return 100;
+    
+    const numericValue = parseFloat(numericMatch[1]);
+    
+    // Convert common units to grams
+    if (amountStr.includes('cup') || amountStr.includes('cups')) {
+      return numericValue * 240; // 1 cup ≈ 240g
+    } else if (amountStr.includes('tbsp') || amountStr.includes('tablespoon')) {
+      return numericValue * 15; // 1 tbsp ≈ 15g
+    } else if (amountStr.includes('tsp') || amountStr.includes('teaspoon')) {
+      return numericValue * 5; // 1 tsp ≈ 5g
+    } else if (amountStr.includes('oz') || amountStr.includes('ounce')) {
+      return numericValue * 28.35; // 1 oz ≈ 28.35g
+    } else if (amountStr.includes('lb') || amountStr.includes('pound')) {
+      return numericValue * 453.59; // 1 lb ≈ 453.59g
+    } else if (amountStr.includes('g') || amountStr.includes('gram')) {
+      return numericValue; // Already in grams
+    } else if (amountStr.includes('ml') || amountStr.includes('milliliter')) {
+      return numericValue; // 1ml ≈ 1g for most ingredients
+    }
+    
+    // Default to grams if unit not recognized
+    return numericValue;
   }
 }

@@ -1,61 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Utensils, Share2, BookOpen } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { Utensils, Share2, BookOpen, Camera, Search, BarChart3 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import RecipeSearch from '../../components/RecipeSearch';
-import RecipeCollection from '../../components/RecipeCollection';
+import FoodSearch from '../FoodSearch';
+import PhotoMeal from '../PhotoMeal';
 import appDownloadLinks from '../../config/app-links';
 
 export default function MealsScreen() {
-  const [showRecipeCollection, setShowRecipeCollection] = useState(false);
-
   const handleShareApp = () => {
-    const message = `🍎 Discover SnapCarb - The Revolutionary Health App!
+    const shareMessage = `🎯 Discover SnapCarb - Your AI-Powered Health Companion!
 
-Transform your health with:
-✅ AI-powered recipe generation
-✅ Real USDA nutrition data
-✅ SnapCarb diet compliance
-✅ Health tracking & insights
-✅ Community support
+🍽️ Generate unique, SnapCarb-approved recipes with AI
+🥗 Track your nutrition and eating windows
+🧠 Get personalized health insights
+�� Follow Dr. Davis's proven health principles
 
-Download now: ${appDownloadLinks.getDownloadLink()}
+📱 Download the app and start your health journey today!
 
-#SnapCarb #Health #Wellness #LowCarb #Nutrition`;
+🔗 Download:
+�� iOS: ${appDownloadLinks.ios.appStore}
+🤖 Android: ${appDownloadLinks.android.playStore}
+�� Web: ${appDownloadLinks.web.downloadPage}
 
-    Alert.alert('Share SnapCarb', message, [
-      { text: 'Copy', onPress: () => Alert.alert('Copied!', 'App link copied to clipboard') },
-      { text: 'Cancel', style: 'cancel' }
-    ]);
+#SnapCarb #Health #AI #Nutrition #Wellness`;
+
+    Alert.alert(
+      'Share SnapCarb App', 
+      'Share the SnapCarb app with friends and family!',
+      [
+        { text: 'Copy Message', onPress: () => {
+          Alert.alert('Copied!', 'App details copied to clipboard');
+        }},
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const handleMyRecipes = () => {
-    setShowRecipeCollection(true);
-  };
-
-  const handleBackToSearch = () => {
-    setShowRecipeCollection(false);
-  };
-
-  if (showRecipeCollection) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch}>
-              <BookOpen size={32} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShareApp}>
-              <Share2 size={24} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.title}>My Recipe Collection</Text>
-          <Text style={styles.subtitle}>Manage your saved SnapCarb recipes</Text>
-        </View>
-        <RecipeCollection userId="user-123" />
-      </View>
+    Alert.alert(
+      'My Recipes', 
+      'Access your saved recipe collection!',
+      [
+        { text: 'View Collection', onPress: () => {
+          Alert.alert('Coming Soon!', 'Recipe collection will be available in the next update');
+        }},
+        { text: 'Cancel', style: 'cancel' }
+      ]
     );
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -71,18 +64,41 @@ Download now: ${appDownloadLinks.getDownloadLink()}
         <Text style={styles.subtitle}>Find recipes and plan your meals</Text>
       </View>
 
-      {/* My Recipes Button */}
-      <View style={styles.myRecipesSection}>
-        <TouchableOpacity style={styles.myRecipesButton} onPress={handleMyRecipes}>
-          <BookOpen size={20} color={colors.background} />
-          <Text style={styles.myRecipesButtonText}>My Recipe Collection</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.quickActionButton} onPress={handleMyRecipes}>
+            <BookOpen size={20} color={colors.background} />
+            <Text style={styles.quickActionText}>My Recipes</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.quickActionButton} onPress={() => {}}>
+            <BarChart3 size={20} color={colors.background} />
+            <Text style={styles.quickActionText}>Daily Log</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <RecipeSearch />
-      </View>
+        {/* Photo Meal Analysis */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📸 Analyze Your Meal</Text>
+          <Text style={styles.sectionSubtitle}>Take a photo of your meal or ingredients for instant SnapCarb analysis</Text>
+          <PhotoMeal />
+        </View>
+
+        {/* Food Search */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>�� Search Foods</Text>
+          <Text style={styles.sectionSubtitle}>Look up any food for nutrition facts and SnapCarb compliance</Text>
+          <FoodSearch />
+        </View>
+
+        {/* Recipe Search */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🍽️ Find Recipes</Text>
+          <Text style={styles.sectionSubtitle}>Generate AI-powered SnapCarb-approved recipes</Text>
+          <RecipeSearch />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -108,9 +124,6 @@ const styles = StyleSheet.create({
   shareButton: {
     padding: 5,
   },
-  backButton: {
-    padding: 5,
-  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -123,11 +136,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  myRecipesSection: {
+  scrollContent: {
+    flex: 1,
     paddingHorizontal: 20,
-    marginBottom: 20,
   },
-  myRecipesButton: {
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickActionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -140,13 +159,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  myRecipesButtonText: {
-    fontSize: 16,
+  quickActionText: {
+    fontSize: 14,
     fontWeight: '600',
     color: colors.background,
     marginLeft: 8,
   },
-  content: {
-    flex: 1,
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
   },
 });

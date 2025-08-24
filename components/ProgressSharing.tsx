@@ -248,9 +248,9 @@ Join me on SnapCarb and start your wellness journey today!
       <View style={styles.previewSection}>
         <Text style={styles.sectionTitle}>Preview</Text>
         <View style={styles.previewCard}>
-          <ScrollView style={styles.previewContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.previewContent}>
             <Text style={styles.previewText}>{getShareContent()}</Text>
-          </ScrollView>
+          </View>
         </View>
       </View>
 

@@ -15,47 +15,48 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function importFoodCategories() {
-  console.log('📂 Importing food categories...');
+async function importNutrients() {
+  console.log('🧬 Importing nutrients...');
   
-  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/food_category.csv');
+  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/nutrient.csv');
   
   if (!fs.existsSync(filePath)) {
-    console.log('⚠️  food_category.csv not found, skipping...');
+    console.log('⚠️  nutrient.csv not found, skipping...');
     return 0;
   }
   
-  const categories: any[] = [];
+  const nutrients: any[] = [];
   
   return new Promise<number>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv())
       .on('data', (row: any) => {
-        categories.push({
+        nutrients.push({
           id: parseInt(row.id),
-          code: row.code,
           name: row.name,
-          description: row.description || null,
+          unit_name: row.unit_name,
+          nutrient_nbr: row.nutrient_nbr || null,
+          rank: parseInt(row.rank) || null,
         });
       })
       .on('end', async () => {
-        if (categories.length === 0) {
-          console.log('⚠️  No food categories found');
+        if (nutrients.length === 0) {
+          console.log('⚠️  No nutrients found');
           resolve(0);
           return;
         }
         
         try {
           const { error } = await supabase
-            .from('food_category')
-            .upsert(categories, { onConflict: 'id' });
+            .from('nutrient')
+            .upsert(nutrients, { onConflict: 'id' });
           
           if (error) {
-            console.error('❌ Error importing food categories:', error);
+            console.error('❌ Error importing nutrients:', error);
             resolve(0);
           } else {
-            console.log(`✅ Imported ${categories.length} food categories`);
-            resolve(categories.length);
+            console.log(`✅ Imported ${nutrients.length} nutrients`);
+            resolve(nutrients.length);
           }
         } catch (error) {
           console.error('❌ Exception during import:', error);
@@ -66,119 +67,17 @@ async function importFoodCategories() {
   });
 }
 
-async function importMeasureUnits() {
-  console.log('📏 Importing measure units...');
+async function importFoods() {
+  console.log('🍎 Importing foods...');
   
-  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/measure_unit.csv');
+  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/food.csv');
   
   if (!fs.existsSync(filePath)) {
-    console.log('⚠️  measure_unit.csv not found, skipping...');
+    console.log('⚠️  food.csv not found, skipping...');
     return 0;
   }
   
-  const units: any[] = [];
-  
-  return new Promise<number>((resolve, reject) => {
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (row: any) => {
-        units.push({
-          id: parseInt(row.id),
-          name: row.name,
-          abbreviation: row.abbreviation || null,
-        });
-      })
-      .on('end', async () => {
-        if (units.length === 0) {
-          console.log('⚠️  No measure units found');
-          resolve(0);
-          return;
-        }
-        
-        try {
-          const { error } = await supabase
-            .from('measure_unit')
-            .upsert(units, { onConflict: 'id' });
-          
-          if (error) {
-            console.error('❌ Error importing measure units:', error);
-            resolve(0);
-          } else {
-            console.log(`✅ Imported ${units.length} measure units`);
-            resolve(units.length);
-          }
-        } catch (error) {
-          console.error('❌ Exception during import:', error);
-          resolve(0);
-        }
-      })
-      .on('error', reject);
-  });
-}
-
-async function importFoodComponents() {
-  console.log('🧬 Importing food components...');
-  
-  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/food_component.csv');
-  
-  if (!fs.existsSync(filePath)) {
-    console.log('⚠️  food_component.csv not found, skipping...');
-    return 0;
-  }
-  
-  const components: any[] = [];
-  
-  return new Promise<number>((resolve, reject) => {
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (row: any) => {
-        components.push({
-          id: parseInt(row.id),
-          fdc_id: parseInt(row.fdc_id),
-          name: row.name,
-          data_type: row.data_type || null,
-          description: row.description || null,
-        });
-      })
-      .on('end', async () => {
-        if (components.length === 0) {
-          console.log('⚠️  No food components found');
-          resolve(0);
-          return;
-        }
-        
-        try {
-          const { error } = await supabase
-            .from('food_component')
-            .upsert(components, { onConflict: 'id' });
-          
-          if (error) {
-            console.error('❌ Error importing food components:', error);
-            resolve(0);
-          } else {
-            console.log(`✅ Imported ${components.length} food components`);
-            resolve(components.length);
-          }
-        } catch (error) {
-          console.error('❌ Exception during import:', error);
-          resolve(0);
-        }
-      })
-      .on('error', reject);
-  });
-}
-
-async function importFoodPortions() {
-  console.log('🥄 Importing food portions...');
-  
-  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/food_portion.csv');
-  
-  if (!fs.existsSync(filePath)) {
-    console.log('⚠️  food_portion.csv not found, skipping...');
-    return 0;
-  }
-  
-  const portions: any[] = [];
+  const foods: any[] = [];
   let rowCount = 0;
   
   return new Promise<number>((resolve, reject) => {
@@ -187,42 +86,39 @@ async function importFoodPortions() {
       .on('data', (row: any) => {
         rowCount++;
         
-        portions.push({
-          id: parseInt(row.id),
+        foods.push({
           fdc_id: parseInt(row.fdc_id),
-          seq_num: parseInt(row.seq_num) || null,
-          amount: parseFloat(row.amount) || 0,
-          measure_unit_id: parseInt(row.measure_unit_id) || null,
-          portion_description: row.portion_description || null,
-          gram_weight: parseFloat(row.gram_weight) || null,
-          data_points: parseInt(row.data_points) || null,
-          footnote: row.footnote || null,
+          description: row.description,
+          data_type: row.data_type || null,
+          publication_date: row.publication_date || null,
+          all_highlight_fields: row.all_highlight_fields || null,
+          all_keywords: row.all_keywords || null,
         });
         
         if (rowCount % 10000 === 0) {
-          console.log(`📊 Processed ${rowCount} portions...`);
+          console.log(`📊 Processed ${rowCount} foods...`);
         }
       })
       .on('end', async () => {
-        if (portions.length === 0) {
-          console.log('⚠️  No food portions found');
+        if (foods.length === 0) {
+          console.log('⚠️  No foods found');
           resolve(0);
           return;
         }
         
-        console.log(`📊 Processing ${portions.length} portions in batches...`);
+        console.log(`📊 Processing ${foods.length} foods in batches...`);
         
         // Process in batches to avoid memory issues
         const batchSize = 1000;
         let imported = 0;
         
-        for (let i = 0; i < portions.length; i += batchSize) {
-          const batch = portions.slice(i, i + batchSize);
+        for (let i = 0; i < foods.length; i += batchSize) {
+          const batch = foods.slice(i, i + batchSize);
           
           try {
             const { error } = await supabase
-              .from('food_portion')
-              .upsert(batch, { onConflict: 'id' });
+              .from('food')
+              .upsert(batch, { onConflict: 'fdc_id' });
             
             if (error) {
               console.error(`❌ Error importing batch ${Math.floor(i/batchSize) + 1}:`, error);
@@ -235,7 +131,82 @@ async function importFoodPortions() {
           }
         }
         
-        console.log(`🎉 Food portions import complete! Total imported: ${imported}`);
+        console.log(`🎉 Foods import complete! Total imported: ${imported}`);
+        resolve(imported);
+      })
+      .on('error', reject);
+  });
+}
+
+async function importFoodNutrients() {
+  console.log('🥗 Importing food nutrients...');
+  
+  const filePath = path.join(__dirname, '../USDA FOOD IMPORT/FoodData_Central_csv_2025-04-24/food_nutrient.csv');
+  
+  if (!fs.existsSync(filePath)) {
+    console.log('⚠️  food_nutrient.csv not found, skipping...');
+    return 0;
+  }
+  
+  const foodNutrients: any[] = [];
+  let rowCount = 0;
+  
+  return new Promise<number>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (row: any) => {
+        rowCount++;
+        
+        foodNutrients.push({
+          fdc_id: parseInt(row.fdc_id),
+          nutrient_id: parseInt(row.nutrient_id),
+          amount: parseFloat(row.amount) || 0,
+          data_points: parseInt(row.data_points) || null,
+          derivation_id: row.derivation_id || null,
+          min: parseFloat(row.min) || null,
+          max: parseFloat(row.max) || null,
+          median: parseFloat(row.median) || null,
+          footnote: row.footnote || null,
+          min_year_acquired: parseInt(row.min_year_acquired) || null,
+        });
+        
+        if (rowCount % 10000 === 0) {
+          console.log(`📊 Processed ${rowCount} food nutrients...`);
+        }
+      })
+      .on('end', async () => {
+        if (foodNutrients.length === 0) {
+          console.log('⚠️  No food nutrients found');
+          resolve(0);
+          return;
+        }
+        
+        console.log(`📊 Processing ${foodNutrients.length} food nutrients in batches...`);
+        
+        // Process in batches to avoid memory issues
+        const batchSize = 1000;
+        let imported = 0;
+        
+        for (let i = 0; i < foodNutrients.length; i += batchSize) {
+          const batch = foodNutrients.slice(i, i + batchSize);
+          
+          try {
+            const { error } = await supabase
+              .from('food_nutrient')
+              .upsert(batch, { onConflict: 'fdc_id,nutrient_id' });
+            
+            if (error) {
+              console.error(`❌ Error importing batch ${Math.floor(i/batchSize) + 1}:`, error);
+            } else {
+              imported += batch.length;
+              console.log(`✅ Imported batch ${Math.floor(i/batchSize) + 1}: ${imported} total imported`);
+            }
+          } catch (error) {
+            console.error(`❌ Exception in batch ${Math.floor(i/batchSize) + 1}:`, error);
+          }
+        }
+        
+        console.log(`🎉 Food nutrients import complete! Total imported: ${imported}`);
         resolve(imported);
       })
       .on('error', reject);
@@ -246,18 +217,20 @@ async function main() {
   console.log('🚀 Starting essential USDA data import...');
   
   try {
-    const categoryCount = await importFoodCategories();
-    const unitCount = await importMeasureUnits();
-    const componentCount = await importFoodComponents();
-    const portionCount = await importFoodPortions();
+    const nutrientCount = await importNutrients();
+    const foodCount = await importFoods();
+    const foodNutrientCount = await importFoodNutrients();
     
     console.log('\n🎉 Import Summary:');
-    console.log(`📂 Food Categories: ${categoryCount}`);
-    console.log(`📏 Measure Units: ${unitCount}`);
-    console.log(`🧬 Food Components: ${componentCount}`);
-    console.log(`🥄 Food Portions: ${portionCount}`);
+    console.log(`🧬 Nutrients: ${nutrientCount}`);
+    console.log(`🍎 Foods: ${foodCount}`);
+    console.log(`🥗 Food Nutrients: ${foodNutrientCount}`);
     
     console.log('\n✅ Essential USDA data import completed!');
+    console.log('\n💡 Next steps:');
+    console.log('1. Test food search in your app');
+    console.log('2. Check if nutrition data is now available');
+    console.log('3. Run recipe search to verify real nutrition data');
     
   } catch (error) {
     console.error('❌ Import failed:', error);

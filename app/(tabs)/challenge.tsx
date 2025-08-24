@@ -79,8 +79,55 @@ export default function ChallengeScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {editingDay && (
-          <View style={styles.editForm}>
-            <Text style={styles.formTitle}>Day {editingDay} Check-in</Text>
+          <>
+            {/* Must Know Section - DR Davis Program Insights */}
+            <View style={styles.mustKnowSection}>
+              <Text style={styles.mustKnowTitle}>💡 Must Know: Your Path to Extraordinary Health</Text>
+              <Text style={styles.mustKnowText}>
+                {editingDay <= 7 ? 
+                  "You're in the detox/withdrawal phase. This is normal and temporary - like having the flu. Focus on hydration, salt your food, and pamper yourself. Symptoms typically resolve in 5-7 days." :
+                  "Great progress! You're past the toughest part. Continue with simple meals and supplements. Your body is healing and you should be feeling better now."
+                }
+              </Text>
+              
+              <View style={styles.mustKnowTips}>
+                <Text style={styles.mustKnowTipTitle}>Key Tips for Day {editingDay}:</Text>
+                {editingDay === 1 && (
+                  <Text style={styles.mustKnowTip}>• Start supplements: Vitamin D, Fish Oil, Magnesium, Iodine, Probiotic</Text>
+                )}
+                {editingDay === 3 && (
+                  <Text style={styles.mustKnowTip}>• Add 10g prebiotic fibers daily (inulin, jicama, small legumes)</Text>
+                )}
+                {editingDay === 10 && (
+                  <Text style={styles.mustKnowTip}>• Increase prebiotic fibers to 20g daily</Text>
+                )}
+                <Text style={styles.mustKnowTip}>• Keep meals simple - familiar dishes only</Text>
+                <Text style={styles.mustKnowTip}>• Hydrate more than usual, salt food lightly</Text>
+                <Text style={styles.mustKnowTip}>• Avoid strenuous exercise, light walking is fine</Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.innerCircleButton}
+                onPress={() => {
+                  Alert.alert(
+                    'Join DR Davis Inner Circle',
+                    'Get complete program details, live meetups with Dr. Davis, exclusive recipes, and ongoing support for your health journey.',
+                    [
+                      { text: 'Learn More', onPress: () => {
+                        Alert.alert('Inner Circle', 'Visit: https://innercircle.undoctored.com/');
+                      }},
+                      { text: 'Maybe Later', style: 'cancel' }
+                    ]
+                  );
+                }}
+              >
+                <Text style={styles.innerCircleButtonText}>🌟 Get Complete DR Davis Program Details</Text>
+                <Text style={styles.innerCircleSubtext}>Join Inner Circle for Live Meetups & Full Support</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.editForm}>
+              <Text style={styles.formTitle}>Day {editingDay} Check-in</Text>
             
             <Text style={styles.inputLabel}>Symptoms (comma separated)</Text>
             <TextInput
@@ -111,8 +158,9 @@ export default function ChallengeScreen() {
               <TouchableOpacity style={styles.button} onPress={handleSaveDay}>
                 <Text style={styles.buttonText}>Save Check-in</Text>
               </TouchableOpacity>
+                          </View>
             </View>
-          </View>
+          </>
         )}
 
         <Text style={styles.sectionTitle}>Challenge Progress</Text>
@@ -225,6 +273,22 @@ export default function ChallengeScreen() {
             <Text style={styles.guidelineText}>
               Log all meals, track symptoms, take supplements, note how you feel
             </Text>
+          </View>
+          
+          <View style={styles.guidelineCard}>
+            <Text style={styles.guidelineTitle}>🌟 DR Davis Program Insights</Text>
+            <Text style={styles.guidelineText}>
+              Based on the Infinite Health lifestyle. First 7 days focus on detox/withdrawal management. 
+              Keep meals simple, hydrate well, and follow supplement schedule. Join the Inner Circle for complete details.
+            </Text>
+            <TouchableOpacity 
+              style={styles.guidelineLinkButton}
+              onPress={() => {
+                Alert.alert('Inner Circle', 'Visit: https://innercircle.undoctored.com/');
+              }}
+            >
+              <Text style={styles.guidelineLinkText}>Learn More About DR Davis Program</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -484,5 +548,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  // DR Davis Program Insights Styles
+  mustKnowSection: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  mustKnowTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 12,
+  },
+  mustKnowText: {
+    fontSize: 14,
+    color: '#92400e',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  mustKnowTips: {
+    marginBottom: 16,
+  },
+  mustKnowTipTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  mustKnowTip: {
+    fontSize: 14,
+    color: '#92400e',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  innerCircleButton: {
+    backgroundColor: '#f59e0b',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#d97706',
+  },
+  innerCircleButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  innerCircleSubtext: {
+    fontSize: 12,
+    color: '#ffffff',
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  guidelineLinkButton: {
+    backgroundColor: '#f59e0b',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  guidelineLinkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

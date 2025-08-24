@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, Target, CheckCircle, XCircle, AlertCircle, Share2, Bookmark, Printer, Lightbulb, Heart, Leaf, Brain, Shield, Zap } from 'lucide-react-native';
-import { SnapCarbRecipe } from '@/services/recipe-service';
+import { SnapCarbRecipe } from '../services/recipe-service';
 
 interface RecipeCardProps {
   recipe: SnapCarbRecipe;
@@ -31,7 +31,7 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
       {/* Header Section */}
       <LinearGradient
         colors={['#1F2937', '#374151']}
@@ -264,7 +264,7 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
           <Text style={styles.actionButtonText}>Print</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
