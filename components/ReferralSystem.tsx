@@ -192,7 +192,7 @@ ${referralLink}
           <Text style={styles.referralName}>{referral.referredName}</Text>
           <Text style={styles.referralEmail}>{referral.referredEmail}</Text>
         </View>
-        <View style={[styles.statusBadge, styles[`status${referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}`]]}>
+        <View style={[styles.statusBadge, (styles as any)[`status${referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}`]]}>
           <Text style={styles.statusText}>{referral.status}</Text>
         </View>
       </View>

@@ -128,7 +128,7 @@ export default function SociabilityTracker() {
   };
 
   const addInteraction = () => {
-    if (!newInteraction.type || !newInteraction.mood || !newInteraction.notes.trim()) {
+    if (!newInteraction.type || !newInteraction.mood || !newInteraction.notes?.trim()) {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
       return;
     }

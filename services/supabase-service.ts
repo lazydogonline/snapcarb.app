@@ -232,6 +232,40 @@ export class RecipeService {
   }
 
   /**
+   * Update recipe fields (e.g., isFavorite)
+   */
+  static async updateRecipe(recipeId: string, fields: Partial<{ isFavorite: boolean }>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('recipes')
+        .update({
+          is_favorite: fields.isFavorite ?? null,
+        })
+        .eq('id', recipeId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating recipe:', error);
+      throw new Error(`Failed to update recipe: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Delete a recipe
+   */
+  static async deleteRecipe(recipeId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      throw new Error(`Failed to delete recipe: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Map database recipe to SnapCarbRecipe interface
    */
   private static mapDatabaseRecipeToSnapCarbRecipe(dbRecipe: any): SnapCarbRecipe {
@@ -263,5 +297,33 @@ export class RecipeService {
 
 export default RecipeService;
 
+// Minimal stubs for compatibility with example component
+export const mealService = {
+  async getUserMeals(userId: string): Promise<any[]> {
+    // Implement real fetch from Supabase if desired
+    return [];
+  },
+  async createMeal(meal: { userId: string; name: string; netCarbs: number; timestamp: string; description?: string; complianceScore?: number; }): Promise<any> {
+    return {
+      id: Date.now().toString(),
+      name: meal.name,
+      net_carbs: meal.netCarbs,
+      timestamp: meal.timestamp,
+    };
+  },
+};
 
-
+export const authService = {
+  async getCurrentUser(): Promise<any | null> {
+    return null;
+  },
+  async signUp(email: string, password: string, username: string, profile?: any): Promise<void> {
+    return;
+  },
+  async signIn(email: string, password: string): Promise<void> {
+    return;
+  },
+  async signOut(): Promise<void> {
+    return;
+  },
+};

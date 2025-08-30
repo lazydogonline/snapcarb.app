@@ -14,6 +14,8 @@ export interface SnapCarbRecipe {
   totalTime: number;
   servings: number;
   netCarbs: number;
+  isFavorite?: boolean;
+  createdAt?: string;
   ingredients: {
     name: string;
     amount: string;

@@ -87,6 +87,8 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
       supplementsTaken: todaySupplements.length,
       totalSupplements: supplements.length,
       challengeCompleted: todayChallenge?.completed || false,
+      fastingHours: 0,
+      adherenceScore: 10,
     };
   }, [meals, supplements, challenge]);
 

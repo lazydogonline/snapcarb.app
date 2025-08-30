@@ -664,10 +664,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
-  previousDayMood: {
-    flexDirection: 'row',
-    gap: 16,
-  },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',

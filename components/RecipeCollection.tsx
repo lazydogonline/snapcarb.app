@@ -16,7 +16,7 @@ import {
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { SnapCarbRecipe } from '../services/gemini-ai-service';
-import { SupabaseRecipeService } from '../services/supabase-service';
+import { RecipeService as SupabaseRecipeService } from '../services/supabase-service';
 import appDownloadLinks from '../config/app-links';
 
 const { width } = Dimensions.get('window');
