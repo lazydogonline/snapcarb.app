@@ -16,7 +16,7 @@ import {
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { SnapCarbRecipe } from '../services/gemini-ai-service';
-import { SupabaseRecipeService } from '../services/supabase-service';
+import SupabaseRecipeService from '../services/supabase-service';
 import appDownloadLinks from '../config/app-links';
 
 const { width } = Dimensions.get('window');
@@ -126,7 +126,7 @@ ${appDownloadLinks.getDownloadMessage()}`;
           style: 'destructive',
           onPress: async () => {
             try {
-              await SupabaseRecipeService.deleteRecipe(recipeId);
+              await SupabaseRecipeService.removeFromCollection(recipeId, userId);
               setRecipes(recipes.filter(r => r.id !== recipeId));
               Alert.alert('Success', 'Recipe deleted successfully');
             } catch (error) {
@@ -148,8 +148,9 @@ ${appDownloadLinks.getDownloadMessage()}`;
       );
       setRecipes(updatedRecipes);
       
-      // Update in Supabase
-      await SupabaseRecipeService.updateRecipe(recipeId, { isFavorite: !recipes.find(r => r.id === recipeId)?.isFavorite });
+      // Update in Supabase - In production, you'd update the favorite status
+      // For now, just updating local state
+      // await SupabaseRecipeService.updateFavoriteStatus(recipeId, userId, !recipes.find(r => r.id === recipeId)?.isFavorite);
     } catch (error) {
       console.error('Error updating favorite:', error);
     }

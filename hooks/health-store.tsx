@@ -87,6 +87,8 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
       supplementsTaken: todaySupplements.length,
       totalSupplements: supplements.length,
       challengeCompleted: todayChallenge?.completed || false,
+      fastingHours: 0, // This would be calculated from fasting tracker data
+      adherenceScore: 0, // This would be calculated based on compliance
     };
   }, [meals, supplements, challenge]);
 

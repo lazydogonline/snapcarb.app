@@ -11,9 +11,9 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Camera, CameraType, FlashMode } from 'expo-camera';
+import { CameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator } from 'expo-image-manipulator';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Utensils, Camera as CameraIcon, Image as ImageIcon, Sparkles, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useHealth } from '@/hooks/health-store';
 import { aiService, AIAnalysisRequest } from '@/services/ai-service';
@@ -44,14 +44,14 @@ export default function AIMealLogger() {
     ingredients: [],
   });
 
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraView>(null);
+  const [permission, requestPermission] = useCameraPermissions();
 
   React.useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+    if (permission) {
+      setHasPermission(permission.granted);
+    }
+  }, [permission]);
 
   const takePicture = async () => {
     if (cameraRef.current) {
@@ -60,6 +60,11 @@ export default function AIMealLogger() {
           quality: 0.8,
           base64: false,
         });
+        
+        if (!photo) {
+          Alert.alert('Error', 'Failed to take photo');
+          return;
+        }
         
         // Optimize the image
         const optimizedImage = await ImageManipulator.manipulateAsync(
@@ -109,12 +114,14 @@ export default function AIMealLogger() {
         setAnalysis(response.analysis);
         
         // Auto-fill form with AI analysis
-        setFormData(prev => ({
-          ...prev,
-          netCarbs: response.analysis.estimatedNetCarbs,
-          totalCarbs: response.analysis.totalCarbsEstimate,
-          fiber: response.analysis.fiberEstimate,
-        }));
+        if (response.analysis) {
+          setFormData(prev => ({
+            ...prev,
+            netCarbs: response.analysis!.estimatedNetCarbs,
+            totalCarbs: response.analysis!.totalCarbsEstimate,
+            fiber: response.analysis!.fiberEstimate,
+          }));
+        }
       } else {
         Alert.alert('Analysis Failed', response.error || 'Could not analyze photo');
       }
@@ -213,11 +220,11 @@ export default function AIMealLogger() {
   if (showCamera) {
     return (
       <View style={styles.cameraContainer}>
-        <Camera
+        <CameraView
           ref={cameraRef}
           style={styles.camera}
-          type={CameraType.back}
-          flashMode={FlashMode.auto}
+          facing="back"
+          flash="auto"
         >
           <View style={styles.cameraControls}>
             <TouchableOpacity
@@ -234,7 +241,7 @@ export default function AIMealLogger() {
             </TouchableOpacity>
             <View style={styles.cameraButton} />
           </View>
-        </Camera>
+        </CameraView>
       </View>
     );
   }

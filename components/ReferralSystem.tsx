@@ -192,7 +192,7 @@ ${referralLink}
           <Text style={styles.referralName}>{referral.referredName}</Text>
           <Text style={styles.referralEmail}>{referral.referredEmail}</Text>
         </View>
-        <View style={[styles.statusBadge, styles[`status${referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}`]]}>
+        <View style={[styles.statusBadge, referral.status === 'pending' ? styles.statusPending : referral.status === 'signed-up' ? styles.statusSignedUp : styles.statusActive]}>
           <Text style={styles.statusText}>{referral.status}</Text>
         </View>
       </View>
@@ -676,6 +676,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningBackground,
   },
   statusSignedUp: {
+    backgroundColor: colors.infoBackground,
+  },
+  statusJoined: {
     backgroundColor: colors.infoBackground,
   },
   statusActive: {

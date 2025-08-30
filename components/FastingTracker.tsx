@@ -41,7 +41,7 @@ const FastingTracker: React.FC = () => {
   const [progress] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     
     if (isRunning && fastingSession) {
       interval = setInterval(() => {

@@ -14,7 +14,7 @@ export interface AIAnalysisResponse {
 }
 
 export interface HealthInsight {
-  type: 'nutrition' | 'timing' | 'combination' | 'warning';
+  type: 'nutrition' | 'timing' | 'combination' | 'warning' | 'supplement';
   title: string;
   message: string;
   priority: 'low' | 'medium' | 'high';

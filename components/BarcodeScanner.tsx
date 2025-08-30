@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { X, Camera as CameraIcon } from 'lucide-react-native';
-import { colors } from '../config/colors';
+import { colors } from '../constants/colors';
 import { USDANutritionService } from '../services/usda-nutrition-service';
 
 const { width, height } = Dimensions.get('window');

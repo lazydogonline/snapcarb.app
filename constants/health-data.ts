@@ -107,6 +107,8 @@ export const getChallengeDays = (): ChallengeDay[] => {
       symptomsNoted: false,
       symptoms: [],
       notes: '',
+      netCarbsTotal: 0,
+      adherenceScore: 0,
     };
   });
 };

@@ -40,6 +40,8 @@ export interface SnapCarbRecipe {
     gut_health?: string;
     anti_inflammatory?: string;
   };
+  isFavorite?: boolean;
+  createdAt?: string;
 }
 
 export async function estimateCarbsFromImage(base64Image: string): Promise<MealNutrition> {
