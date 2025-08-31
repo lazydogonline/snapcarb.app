@@ -1,10 +1,14 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { View, Text } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { HealthProvider } from "@/hooks/health-store";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
@@ -17,17 +21,16 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    console.log('RootLayout mounting...');
-    SplashScreen.hideAsync().catch(e => console.error('Error hiding splash:', e));
-    return () => console.log('RootLayout unmounting...');
+    SplashScreen.hideAsync();
   }, []);
 
-  console.log('RootLayout rendering simplified version...');
-
-  // Temporarily simplified layout without providers to test if app loads
   return (
-    <View style={{ flex: 1 }}>
-      <RootLayoutNav />
-    </View>
+    <QueryClientProvider client={queryClient}>
+      <HealthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <RootLayoutNav />
+        </GestureHandlerRootView>
+      </HealthProvider>
+    </QueryClientProvider>
   );
 }
