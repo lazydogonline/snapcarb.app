@@ -11,23 +11,27 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('HealthProvider: Loading data...');
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
+      console.log('HealthProvider: Starting AsyncStorage load...');
       const [storedMeals, storedSupplements, storedChallenge] = await Promise.all([
         AsyncStorage.getItem('meals'),
         AsyncStorage.getItem('supplements'),
         AsyncStorage.getItem('challenge'),
       ]);
 
+      console.log('HealthProvider: Data loaded from AsyncStorage');
       if (storedMeals) setMeals(JSON.parse(storedMeals));
       if (storedSupplements) setSupplements(JSON.parse(storedSupplements));
       if (storedChallenge) setChallenge(JSON.parse(storedChallenge));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
+      console.log('HealthProvider: Loading complete');
       setIsLoading(false);
     }
   };
