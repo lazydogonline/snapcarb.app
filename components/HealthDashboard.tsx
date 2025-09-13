@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Modal, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Activity, 
   Heart, 
   Droplets, 
   Scale, 
-  TrendingUp, 
+  TrendingUp,
   Target, 
   AlertCircle, 
   Plus,
@@ -16,6 +16,7 @@ import {
   Trophy
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
+import { useHealth } from '@/hooks/health-store';
 import { 
   HealthMetrics, 
   MetricCategory, 
@@ -31,15 +32,141 @@ interface HealthDashboardProps {
 }
 
 export default function HealthDashboard({ userId }: HealthDashboardProps) {
+  const { healthMetrics, updateHealthMetrics } = useHealth();
   const [activeTab, setActiveTab] = useState<MetricCategory>('bodyMeasurements');
   const [metrics, setMetrics] = useState<Partial<HealthMetrics>>({});
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [goals, setGoals] = useState<HealthGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showMetricModal, setShowMetricModal] = useState(false);
+  const [selectedMetricType, setSelectedMetricType] = useState<string>('');
+  const [fastingStartTime, setFastingStartTime] = useState(new Date());
+  const [fastingEndTime, setFastingEndTime] = useState(new Date());
+  
+  // Input values for different metrics
+  const [waistValue, setWaistValue] = useState('');
+  const [glucoseValue, setGlucoseValue] = useState('');
+  const [preMealGlucose, setPreMealGlucose] = useState('');
+  const [postMealGlucose, setPostMealGlucose] = useState('');
+  const [glucoseTestType, setGlucoseTestType] = useState<'single' | 'no-change'>('no-change');
+  const [noWheat, setNoWheat] = useState(true);
+  const [noSugar, setNoSugar] = useState(true);
+  const [noGrains, setNoGrains] = useState(true);
+  const [useMetric, setUseMetric] = useState(true); // true = metric (cm), false = imperial (inches)
 
   useEffect(() => {
     loadHealthData();
   }, [userId]);
+
+  // Calculate fasting end time (8 hours eating window)
+  useEffect(() => {
+    const endTime = new Date(fastingStartTime);
+    endTime.setHours(endTime.getHours() + 8);
+    setFastingEndTime(endTime);
+  }, [fastingStartTime]);
+
+  const handleMetricClick = (metricType: string) => {
+    setSelectedMetricType(metricType);
+    setShowMetricModal(true);
+    
+    // Reset input values when opening modal
+    setWaistValue('');
+    setGlucoseValue('');
+    setPreMealGlucose('');
+    setPostMealGlucose('');
+    setNoWheat(true);
+    setNoSugar(true);
+    setNoGrains(true);
+  };
+
+  const handleSaveMetric = async () => {
+    try {
+      // Save the metric based on type
+      switch (selectedMetricType) {
+        case 'Waist':
+          if (waistValue) {
+            const unit = useMetric ? 'cm' : 'inches';
+            // Convert to cm for storage if needed
+            const waistInCm = useMetric ? parseFloat(waistValue) : parseFloat(waistValue) * 2.54;
+            
+            await updateHealthMetrics({
+              waistMeasurement: waistInCm
+            });
+            Alert.alert('Success', `Waist measurement saved: ${waistValue}${unit}`);
+          }
+          break;
+        case 'Glucose':
+          if (glucoseTestType === 'no-change') {
+            if (preMealGlucose && postMealGlucose) {
+              const change = Math.abs(parseFloat(postMealGlucose) - parseFloat(preMealGlucose));
+              const isGood = change <= 30;
+              
+              await updateHealthMetrics({
+                glucoseLevel: parseFloat(postMealGlucose)
+              });
+              
+              Alert.alert(
+                isGood ? 'Excellent! ✅' : 'High Change ⚠️', 
+                `Pre: ${preMealGlucose}mg/dL → Post: ${postMealGlucose}mg/dL\nChange: ${change.toFixed(1)}mg/dL\n\n${isGood ? 'Following the No Change Rule!' : 'Consider adjusting your meal choices.'}`
+              );
+            }
+          } else {
+            if (glucoseValue) {
+              await updateHealthMetrics({
+                glucoseLevel: parseFloat(glucoseValue)
+              });
+              Alert.alert('Success', `Glucose level saved: ${glucoseValue}mg/dL`);
+            }
+          }
+          break;
+        case 'Fasting':
+          const duration = Math.round((fastingEndTime.getTime() - fastingStartTime.getTime()) / (1000 * 60 * 60));
+          await updateHealthMetrics({
+            fastingData: {
+              startTime: fastingStartTime,
+              endTime: fastingEndTime,
+              duration: duration,
+              isActive: true
+            }
+          });
+          Alert.alert('Success', `Fasting window saved: ${fastingStartTime.toLocaleTimeString()} - ${fastingEndTime.toLocaleTimeString()}\nDuration: ${duration} hours`);
+          break;
+        case 'No Wheat':
+          await updateHealthMetrics({
+            programRules: {
+              ...healthMetrics.programRules,
+              noWheat: noWheat
+            }
+          });
+          Alert.alert('Success', `Wheat compliance saved: ${noWheat ? 'Avoided wheat ✅' : 'Ate wheat ❌'}`);
+          break;
+        case 'No Sugar':
+          await updateHealthMetrics({
+            programRules: {
+              ...healthMetrics.programRules,
+              noSugar: noSugar
+            }
+          });
+          Alert.alert('Success', `Sugar compliance saved: ${noSugar ? 'Avoided sugar ✅' : 'Ate sugar ❌'}`);
+          break;
+        case 'No Grains':
+          await updateHealthMetrics({
+            programRules: {
+              ...healthMetrics.programRules,
+              noGrains: noGrains
+            }
+          });
+          Alert.alert('Success', `Grains compliance saved: ${noGrains ? 'Avoided grains ✅' : 'Ate grains ❌'}`);
+          break;
+        default:
+          Alert.alert('Success', 'Metric saved successfully!');
+      }
+      
+      setShowMetricModal(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save metric');
+    }
+  };
 
   const loadHealthData = async () => {
     try {
@@ -62,7 +189,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
       id: '1',
       userId,
       date: new Date().toISOString(),
-      weight: 75.5,
+      weight: 75.5, // Keep for BMI calculation but don't display prominently
       bodyFatPercentage: 18.5,
       muscleMass: 58.2,
       waterPercentage: 55.8,
@@ -107,20 +234,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     }
   });
 
-  const getMockAlerts = (): MetricAlert[] => [
-    {
-      id: '1',
-      userId,
-      metricType: 'bodyMeasurements',
-      metricName: 'Weight',
-      currentValue: 75.5,
-      thresholdValue: 70,
-      alertType: 'warning',
-      message: 'Weight is above your target goal',
-      isRead: false,
-      createdAt: new Date().toISOString()
-    }
-  ];
+  const getMockAlerts = (): MetricAlert[] => [];
 
   const getMockGoals = (): HealthGoal[] => [
     {
@@ -165,7 +279,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   };
 
   const renderMetricCard = (title: string, value: string, unit: string, trend: MetricTrend, icon: React.ReactNode) => (
-    <View style={styles.metricCard}>
+    <TouchableOpacity style={styles.metricCard} onPress={() => handleMetricClick(title)}>
       <View style={styles.metricHeader}>
         {icon}
         <Text style={styles.metricTitle}>{title}</Text>
@@ -175,7 +289,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
         <Text style={styles.valueText}>{value}</Text>
         <Text style={styles.unitText}>{unit}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderTabButton = (category: MetricCategory, label: string, icon: React.ReactNode) => (
@@ -193,63 +307,44 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const renderBodyMeasurements = () => (
     <View style={styles.tabContent}>
       <View style={styles.metricsGrid}>
-        {renderMetricCard('Weight', '75.5', 'kg', getMetricTrend('weight'), <Scale size={20} color={colors.primary} />)}
-        {renderMetricCard('Body Fat', '18.5', '%', getMetricTrend('bodyFat'), <Droplets size={20} color={colors.primary} />)}
-        {renderMetricCard('Muscle Mass', '58.2', 'kg', getMetricTrend('muscleMass'), <Activity size={20} color={colors.primary} />)}
-        {renderMetricCard('BMI', '23.4', '', getMetricTrend('bmi'), <Target size={20} color={colors.primary} />)}
+        {renderMetricCard('Waist', useMetric ? '82' : '32.3', useMetric ? 'cm' : 'in', getMetricTrend('waist'), <Scale size={20} color={colors.primary} />)}
+        {renderMetricCard('Glucose', '85', 'mg/dL', getMetricTrend('glucose'), <Droplets size={20} color={colors.primary} />)}
       </View>
       
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Circumference Measurements</Text>
-        <View style={styles.measurementsRow}>
-          <View style={styles.measurementItem}>
-            <Text style={styles.measurementLabel}>Waist</Text>
-            <Text style={styles.measurementValue}>82 cm</Text>
-          </View>
-          <View style={styles.measurementItem}>
-            <Text style={styles.measurementLabel}>Hip</Text>
-            <Text style={styles.measurementValue}>98 cm</Text>
-          </View>
-        </View>
-        <View style={styles.measurementsRow}>
-          <View style={styles.measurementItem}>
-            <Text style={styles.measurementLabel}>Waist/Hip Ratio</Text>
-            <Text style={styles.measurementValue}>0.84</Text>
-          </View>
-          <View style={styles.measurementItem}>
-            <Text style={styles.measurementLabel}>Neck</Text>
-            <Text style={styles.measurementValue}>38 cm</Text>
-          </View>
-        </View>
-      </View>
     </View>
   );
 
   const renderFastingMetrics = () => (
     <View style={styles.tabContent}>
+      <View style={styles.metricsGrid}>
+        {renderMetricCard('Fasting', (healthMetrics.fastingData?.duration || 0).toString(), 'hours', getMetricTrend('fasting'), <Activity size={20} color={colors.primary} />)}
+      </View>
+      
       <View style={styles.fastingOverview}>
         <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.fastingCard}>
           <Text style={styles.fastingTitle}>Current Fasting Status</Text>
           <View style={styles.fastingStats}>
             <View style={styles.fastingStat}>
-              <Text style={styles.fastingStatValue}>16h</Text>
-              <Text style={styles.fastingStatLabel}>Fasting</Text>
+              <Text style={styles.fastingStatValue}>{healthMetrics.fastingData?.duration || 0}h</Text>
+              <Text style={styles.fastingStatLabel}>Duration</Text>
             </View>
             <View style={styles.fastingStat}>
-              <Text style={styles.fastingStatValue}>8h</Text>
-              <Text style={styles.fastingStatLabel}>Eating Window</Text>
+              <Text style={styles.fastingStatValue}>{healthMetrics.fastingData?.isActive ? 'Active' : 'Inactive'}</Text>
+              <Text style={styles.fastingStatLabel}>Status</Text>
             </View>
           </View>
-          <View style={styles.metabolicMarkers}>
-            <View style={styles.marker}>
-              <Text style={styles.markerLabel}>Ketones</Text>
-              <Text style={styles.markerValue}>1.2 mmol/L</Text>
+          {healthMetrics.fastingData?.startTime && (
+            <View style={styles.fastingTimes}>
+              <Text style={styles.fastingTimeText}>
+                Start: {new Date(healthMetrics.fastingData.startTime).toLocaleTimeString()}
+              </Text>
+              {healthMetrics.fastingData.endTime && (
+                <Text style={styles.fastingTimeText}>
+                  End: {new Date(healthMetrics.fastingData.endTime).toLocaleTimeString()}
+                </Text>
+              )}
             </View>
-            <View style={styles.marker}>
-              <Text style={styles.markerLabel}>Glucose</Text>
-              <Text style={styles.markerValue}>85 mg/dL</Text>
-            </View>
-          </View>
+          )}
         </LinearGradient>
       </View>
     </View>
@@ -331,14 +426,39 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     </View>
   );
 
+  const renderProgramRules = () => {
+    // Calculate compliance based on saved metrics from shared health store
+    const wheatCompliant = healthMetrics.programRules?.noWheat !== false;
+    const sugarCompliant = healthMetrics.programRules?.noSugar !== false;
+    const grainsCompliant = healthMetrics.programRules?.noGrains !== false;
+    
+    const complianceCount = [wheatCompliant, sugarCompliant, grainsCompliant].filter(Boolean).length;
+    const compliancePercent = Math.round((complianceCount / 3) * 100);
+    
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.metricsGrid}>
+          {renderMetricCard('No Wheat', wheatCompliant ? '✓' : '✗', 'today', wheatCompliant ? 'improving' : 'declining', 
+            <AlertCircle size={20} color={wheatCompliant ? colors.primary : '#ef4444'} />)}
+          {renderMetricCard('No Sugar', sugarCompliant ? '✓' : '✗', 'today', sugarCompliant ? 'improving' : 'declining', 
+            <AlertCircle size={20} color={sugarCompliant ? colors.primary : '#ef4444'} />)}
+          {renderMetricCard('No Grains', grainsCompliant ? '✓' : '✗', 'today', grainsCompliant ? 'improving' : 'declining', 
+            <AlertCircle size={20} color={grainsCompliant ? colors.primary : '#ef4444'} />)}
+          {renderMetricCard('Compliance', compliancePercent.toString(), '%', compliancePercent >= 67 ? 'improving' : 'declining', 
+            <Target size={20} color={compliancePercent >= 67 ? colors.primary : '#ef4444'} />)}
+        </View>
+      </View>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'bodyMeasurements':
         return renderBodyMeasurements();
       case 'fastingMetrics':
         return renderFastingMetrics();
-      case 'drDavisMarkers':
-        return renderDRDavisMarkers();
+      case 'programRules':
+        return renderProgramRules();
       default:
         return (
           <View style={styles.tabContent}>
@@ -362,30 +482,25 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
       {/* Header */}
       <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Health Dashboard</Text>
+        <Text style={styles.headerTitle}>Health Dashboard</Text>
           <TouchableOpacity style={styles.shareButton}>
             <Share2 size={24} color={colors.background} />
           </TouchableOpacity>
-        </View>
+                </View>
         <Text style={styles.headerSubtitle}>Track your SnapCarb health journey</Text>
-      </LinearGradient>
+            </LinearGradient>
 
       {/* Quick Stats */}
       <View style={styles.quickStats}>
         <View style={styles.statCard}>
-          <Trophy size={24} color={colors.primary} />
-          <Text style={styles.statValue}>45%</Text>
-          <Text style={styles.statLabel}>Goal Progress</Text>
-        </View>
-        <View style={styles.statCard}>
           <Calendar size={24} color={colors.primary} />
-          <Text style={styles.statValue}>16h</Text>
+          <Text style={styles.statValue}>{healthMetrics.fastingData?.duration || 0}h</Text>
           <Text style={styles.statLabel}>Avg Fast</Text>
         </View>
         <View style={styles.statCard}>
           <TrendingUp size={24} color={colors.primary} />
-          <Text style={styles.statValue}>-2.3kg</Text>
-          <Text style={styles.statLabel}>Weight Loss</Text>
+          <Text style={styles.statValue}>-3cm</Text>
+          <Text style={styles.statLabel}>Waist Reduction</Text>
         </View>
       </View>
 
@@ -410,21 +525,203 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {renderTabButton('bodyMeasurements', 'Body', <Scale size={20} color={activeTab === 'bodyMeasurements' ? colors.primary : colors.textSecondary} />)}
-        {renderTabButton('bloodWork', 'Blood', <Droplets size={20} color={activeTab === 'bloodWork' ? colors.primary : colors.textSecondary} />)}
-        {renderTabButton('vitalSigns', 'Vitals', <Heart size={20} color={activeTab === 'vitalSigns' ? colors.primary : colors.textSecondary} />)}
         {renderTabButton('fastingMetrics', 'Fasting', <Activity size={20} color={activeTab === 'fastingMetrics' ? colors.primary : colors.textSecondary} />)}
-        {renderTabButton('drDavisMarkers', 'DR Davis', <Target size={20} color={activeTab === 'drDavisMarkers' ? colors.primary : colors.textSecondary} />)}
-        {renderTabButton('lifestyleMetrics', 'Lifestyle', <BarChart3 size={20} color={activeTab === 'lifestyleMetrics' ? colors.primary : colors.textSecondary} />)}
+        {renderTabButton('programRules', 'Rules', <Target size={20} color={activeTab === 'programRules' ? colors.primary : colors.textSecondary} />)}
       </View>
 
       {/* Tab Content */}
       {renderTabContent()}
 
-      {/* Add Metric Button */}
-      <TouchableOpacity style={styles.addButton}>
-        <Plus size={24} color={colors.background} />
-        <Text style={styles.addButtonText}>Add New Metric</Text>
-      </TouchableOpacity>
+
+      {/* Metric Entry Modal */}
+      <Modal visible={showMetricModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add {selectedMetricType}</Text>
+            
+            {selectedMetricType === 'Waist' && (
+              <View>
+                <View style={styles.unitToggle}>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, useMetric && styles.unitButtonActive]}
+                    onPress={() => setUseMetric(true)}
+                  >
+                    <Text style={[styles.unitButtonText, useMetric && styles.unitButtonTextActive]}>cm</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, !useMetric && styles.unitButtonActive]}
+                    onPress={() => setUseMetric(false)}
+                  >
+                    <Text style={[styles.unitButtonText, !useMetric && styles.unitButtonTextActive]}>inches</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <Text style={styles.inputLabel}>Waist Measurement ({useMetric ? 'cm' : 'inches'}):</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={waistValue}
+                  onChangeText={setWaistValue}
+                  placeholder={`Enter waist measurement in ${useMetric ? 'cm' : 'inches'}`}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
+            {selectedMetricType === 'Glucose' && (
+              <View>
+                <Text style={styles.modalTitle}>The "No Change Rule"</Text>
+                <Text style={styles.ruleDescription}>
+                  Blood sugar 30-60 minutes after meal start should be approximately the same as before the meal
+                </Text>
+                
+                <View style={styles.unitToggle}>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, glucoseTestType === 'no-change' && styles.unitButtonActive]}
+                    onPress={() => setGlucoseTestType('no-change')}
+                  >
+                    <Text style={[styles.unitButtonText, glucoseTestType === 'no-change' && styles.unitButtonTextActive]}>No Change Test</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, glucoseTestType === 'single' && styles.unitButtonActive]}
+                    onPress={() => setGlucoseTestType('single')}
+                  >
+                    <Text style={[styles.unitButtonText, glucoseTestType === 'single' && styles.unitButtonTextActive]}>Single Reading</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {glucoseTestType === 'no-change' ? (
+                  <View>
+                    <Text style={styles.inputLabel}>Pre-Meal Glucose (mg/dL):</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={preMealGlucose}
+                      onChangeText={setPreMealGlucose}
+                      placeholder="Before eating"
+                      keyboardType="numeric"
+                    />
+                    
+                    <Text style={styles.inputLabel}>Post-Meal Glucose (mg/dL):</Text>
+                    <Text style={styles.timeHelperText}>30-60 minutes after meal start</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={postMealGlucose}
+                      onChangeText={setPostMealGlucose}
+                      placeholder="30-60 min after eating"
+                      keyboardType="numeric"
+                    />
+                    
+                    {preMealGlucose && postMealGlucose && (
+                      <View style={styles.glucoseResult}>
+                        <Text style={styles.glucoseResultText}>
+                          Change: {(parseFloat(postMealGlucose) - parseFloat(preMealGlucose)).toFixed(1)} mg/dL
+                        </Text>
+                        <Text style={[styles.glucoseStatus, {
+                          color: (() => {
+                            const change = parseFloat(postMealGlucose) - parseFloat(preMealGlucose);
+                            if (change < 0) return '#22c55e'; // Green for drops
+                            if (change <= 10) return '#22c55e'; // Green for stable
+                            if (change <= 30) return '#f59e0b'; // Orange for moderate rise
+                            return '#ef4444'; // Red for high spike
+                          })()
+                        }]}>
+                          {(() => {
+                            const change = parseFloat(postMealGlucose) - parseFloat(preMealGlucose);
+                            
+                            if (change < 0) return '✅ Excellent! (Dropped)';
+                            if (change <= 10) return '✅ Good! (Stable)';
+                            if (change <= 30) return '⚠️ Moderate Rise';
+                            if (change <= 50) return '🚨 High Spike!';
+                            return '💥 EPIC FAIL!';
+                          })()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={styles.inputLabel}>Glucose Level (mg/dL):</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={glucoseValue}
+                      onChangeText={setGlucoseValue}
+                      placeholder="Enter glucose level"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+            
+            {selectedMetricType === 'Fasting' && (
+              <View>
+                <Text style={styles.inputLabel}>Fasting Start Time:</Text>
+                <TouchableOpacity style={styles.timeButton}>
+                  <Text style={styles.timeButtonText}>{fastingStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.inputLabel}>Eating Window Ends:</Text>
+                <View style={styles.calculatedTime}>
+                  <Text style={styles.calculatedTimeText}>
+                    {fastingEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </Text>
+                  <Text style={styles.calculatedLabel}>(8 hours later)</Text>
+                </View>
+              </View>
+            )}
+
+            {selectedMetricType === 'No Wheat' && (
+              <View>
+                <Text style={styles.inputLabel}>Did you avoid wheat today?</Text>
+                <View style={styles.checkboxContainer}>
+                  <TouchableOpacity 
+                    style={[styles.checkbox, noWheat && styles.checkboxChecked]}
+                    onPress={() => setNoWheat(!noWheat)}
+                  >
+                    <Text style={styles.checkboxText}>{noWheat ? '✅ Yes, I avoided wheat' : '❌ No, I ate wheat'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {selectedMetricType === 'No Sugar' && (
+              <View>
+                <Text style={styles.inputLabel}>Did you avoid sugar today?</Text>
+                <View style={styles.checkboxContainer}>
+                  <TouchableOpacity 
+                    style={[styles.checkbox, noSugar && styles.checkboxChecked]}
+                    onPress={() => setNoSugar(!noSugar)}
+                  >
+                    <Text style={styles.checkboxText}>{noSugar ? '✅ Yes, I avoided sugar' : '❌ No, I ate sugar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {selectedMetricType === 'No Grains' && (
+              <View>
+                <Text style={styles.inputLabel}>Did you avoid grains today?</Text>
+                <View style={styles.checkboxContainer}>
+                  <TouchableOpacity 
+                    style={[styles.checkbox, noGrains && styles.checkboxChecked]}
+                    onPress={() => setNoGrains(!noGrains)}
+                  >
+                    <Text style={styles.checkboxText}>{noGrains ? '✅ Yes, I avoided grains' : '❌ No, I ate grains'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowMetricModal(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveMetric}>
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -825,4 +1122,184 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: colors.textSecondary + '40',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.background,
+  },
+  timeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  timeButtonText: {
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  checkboxContainer: {
+    marginTop: 8,
+  },
+  checkbox: {
+    backgroundColor: colors.textSecondary + '20',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  checkboxText: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  unitToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.textSecondary + '20',
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  unitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  unitButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  unitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  unitButtonTextActive: {
+    color: colors.background,
+  },
+  ruleDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  timeHelperText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  glucoseResult: {
+    backgroundColor: colors.secondary + '20',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  glucoseResultText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  glucoseStatus: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  fastingTimes: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  fastingTimeText: {
+    color: colors.background,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  calculatedTime: {
+    backgroundColor: colors.secondary + '20',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  calculatedTimeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  calculatedLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: colors.textSecondary + '20',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    padding: 12,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.background,
+  },
 });
+

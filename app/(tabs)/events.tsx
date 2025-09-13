@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Linking } from 'react-native';
+import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart, Play, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { healthEvents } from '@/constants/health-data';
-import DrDavisEvents from '@/components/DrDavisEvents';
 import SociabilityTracker from '@/components/SociabilityTracker';
 
 export default function EventsScreen() {
-  const [activeTab, setActiveTab] = useState<'events' | 'sociability'>('events');
+  const [activeTab, setActiveTab] = useState<'videos' | 'events'>('videos');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   
   const upcomingEvents = healthEvents.filter(event => event.date > new Date());
   const pastEvents = healthEvents.filter(event => event.date <= new Date());
@@ -51,37 +52,138 @@ export default function EventsScreen() {
     console.log('Event pressed:', event.title);
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleVideoPress = async (videoUrl: string) => {
+    try {
+      const supported = await Linking.canOpenURL(videoUrl);
+      if (supported) {
+        await Linking.openURL(videoUrl);
+      }
+    } catch (error) {
+      console.error('Error opening video:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Health Events</Text>
+      <LinearGradient
+        colors={['#4ade80', '#22c55e', '#16a34a']}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>Events & Learning</Text>
         <Text style={styles.headerSubtitle}>
-          Dr. William Davis&apos;s Infinite Health Program
+          Latest health insights and upcoming events
         </Text>
-      </View>
+      </LinearGradient>
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
-          onPress={() => setActiveTab('events')}
+          style={[styles.tab, activeTab === 'videos' && styles.activeTab]}
+          onPress={() => setActiveTab('videos')}
         >
-          <Calendar size={20} color={activeTab === 'events' ? '#3b82f6' : '#6b7280'} />
-          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Events</Text>
+          <Video size={20} color={activeTab === 'videos' ? '#8B5CF6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'videos' && styles.activeTabText]}>Video Library</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'sociability' && styles.activeTab]}
-          onPress={() => setActiveTab('sociability')}
+          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
+          onPress={() => setActiveTab('events')}
         >
-          <Heart size={20} color={activeTab === 'sociability' ? '#3b82f6' : '#6b7280'} />
-          <Text style={[styles.tabText, activeTab === 'sociability' && styles.activeTabText]}>Sociability</Text>
+          <Calendar size={20} color={activeTab === 'events' ? '#8B5CF6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Live Events</Text>
         </TouchableOpacity>
       </View>
 
       {/* Content based on active tab */}
+      {activeTab === 'videos' && (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.videoLibraryHeader}>
+            <Text style={styles.sectionTitle}>Dr. Davis Video Library</Text>
+            <Text style={styles.sectionDescription}>
+              Stay updated with Dr. William Davis's latest research, insights, and health strategies. New videos added regularly across all health categories.
+            </Text>
+          </View>
+
+          {['DIETARY FIBER', 'STATINS', 'HEART', 'MICROBES', 'GRAINS'].map((category) => {
+            const categoryVideos = pastEvents.filter(event => event.videoUrl && event.category === category);
+            if (categoryVideos.length === 0) return null;
+            
+            const isExpanded = expandedCategories.includes(category);
+            const categoryColors = {
+              'DIETARY FIBER': '#8B5CF6',
+              'STATINS': '#10B981', 
+              'HEART': '#EF4444',
+              'MICROBES': '#F59E0B',
+              'GRAINS': '#06B6D4'
+            };
+            
+            return (
+              <View key={category} style={styles.categoryContainer}>
+                <TouchableOpacity
+                  style={[styles.categoryHeader, { backgroundColor: categoryColors[category] || '#8B5CF6' }]}
+                  onPress={() => toggleCategory(category)}
+                >
+                  <View style={styles.categoryHeaderContent}>
+                    <Video size={24} color="#FFFFFF" />
+                    <Text style={styles.categoryName}>{category}</Text>
+                  </View>
+                  {isExpanded ? 
+                    <ChevronDown size={24} color="#FFFFFF" /> : 
+                    <ChevronRight size={24} color="#FFFFFF" />
+                  }
+                </TouchableOpacity>
+                
+                {isExpanded && (
+                  <View style={styles.videosContainer}>
+                    {categoryVideos.map((video) => (
+                      <TouchableOpacity
+                        key={video.id}
+                        style={styles.videoCard}
+                        onPress={() => handleVideoPress(video.videoUrl!)}
+                      >
+                        <View style={styles.videoInfo}>
+                          <Text style={styles.videoTitle}>{video.title}</Text>
+                          <Text style={styles.videoDescription}>{video.description}</Text>
+                        </View>
+                        <ExternalLink size={20} color="#6B7280" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {activeTab === 'events' && (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Join Inner Circle */}
+          <TouchableOpacity 
+            style={styles.innerCircleCard}
+            onPress={() => handleVideoPress('https://innercircle.drdavisinfinitehealth.com/landing/')}
+          >
+            <LinearGradient
+              colors={['#22c55e', '#16a34a', '#15803d']}
+              style={styles.innerCircleGradient}
+            >
+              <Users size={32} color="#FFFFFF" />
+              <Text style={styles.innerCircleTitle}>Join Dr. Davis Inner Circle</Text>
+              <Text style={styles.innerCircleDescription}>
+                Get exclusive access to Dr. Davis's advanced health protocols, community support, and personalized guidance
+              </Text>
+              <ExternalLink size={20} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {upcomingEvents.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Upcoming Events</Text>
@@ -135,50 +237,6 @@ export default function EventsScreen() {
           </>
         )}
 
-        {pastEvents.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Past Events</Text>
-            {pastEvents.map((event) => (
-              <View key={event.id} style={[styles.eventCard, styles.pastEventCard]}>
-                <View style={styles.eventHeader}>
-                  <View style={styles.eventIcon}>
-                    {getEventIcon(event.type)}
-                  </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={[styles.eventTitle, styles.pastEventTitle]}>
-                      {event.title}
-                    </Text>
-                    <Text style={styles.eventType}>
-                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                    </Text>
-                  </View>
-                  <View style={styles.pastEventBadge}>
-                    <Text style={styles.pastEventBadgeText}>ENDED</Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.eventDescription, styles.pastEventDescription]}>
-                  {event.description}
-                </Text>
-
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetail}>
-                    <Calendar color="#9ca3af" size={16} />
-                    <Text style={[styles.eventDetailText, styles.pastEventDetailText]}>
-                      {formatDate(event.date)}
-                    </Text>
-                  </View>
-                  <View style={styles.eventDetail}>
-                    <Clock color="#9ca3af" size={16} />
-                    <Text style={[styles.eventDetailText, styles.pastEventDetailText]}>
-                      {event.time}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </>
-        )}
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>About These Events</Text>
@@ -229,11 +287,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#3b82f6',
     padding: 24,
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingBottom: 30,
   },
   headerTitle: {
     fontSize: 28,

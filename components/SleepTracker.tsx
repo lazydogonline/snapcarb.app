@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface SleepRecord {
   id: string;
@@ -14,9 +15,63 @@ interface SleepRecord {
 }
 
 export default function SleepTracker() {
-  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([]);
+  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([
+    {
+      id: '1',
+      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
+      bedtime: '22:30',
+      wakeTime: '06:30',
+      totalHours: 8.0,
+      quality: 'good',
+      notes: 'Felt refreshed this morning',
+      factors: ['Screen time before bed']
+    },
+    {
+      id: '2',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days ago
+      bedtime: '23:00',
+      wakeTime: '07:00',
+      totalHours: 8.0,
+      quality: 'excellent',
+      notes: 'Perfect sleep, no interruptions',
+      factors: []
+    },
+    {
+      id: '3',
+      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days ago
+      bedtime: '22:15',
+      wakeTime: '06:15',
+      totalHours: 8.0,
+      quality: 'good',
+      notes: 'Woke up once during the night',
+      factors: ['Room too warm']
+    }
+  ]);
+
+  // Clean up records older than 7 days
+  useEffect(() => {
+    const cleanOldRecords = () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      setSleepRecords(prevRecords => 
+        prevRecords.filter(record => {
+          const recordDate = new Date(record.date);
+          return recordDate >= sevenDaysAgo;
+        })
+      );
+    };
+
+    // Clean immediately and then every day
+    cleanOldRecords();
+    const interval = setInterval(cleanOldRecords, 24 * 60 * 60 * 1000); // Check daily
+
+    return () => clearInterval(interval);
+  }, []);
   const [currentRecord, setCurrentRecord] = useState<Partial<SleepRecord>>({});
   const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [showBedtimePicker, setShowBedtimePicker] = useState(false);
+  const [showWakeTimePicker, setShowWakeTimePicker] = useState(false);
+  const [bedtimeDate, setBedtimeDate] = useState(new Date());
+  const [wakeTimeDate, setWakeTimeDate] = useState(new Date());
 
   const sleepQualityColors = {
     excellent: '#4CAF50',
@@ -37,6 +92,46 @@ export default function SleepTracker() {
     'Irregular schedule',
     'Medications'
   ];
+
+  const handleBedtimeChange = (event: any, selectedDate?: Date) => {
+    setShowBedtimePicker(false);
+    if (selectedDate) {
+      setBedtimeDate(selectedDate);
+      const timeString = selectedDate.toTimeString().slice(0, 5); // HH:MM format
+      setCurrentRecord(prev => ({ ...prev, bedtime: timeString }));
+      calculateSleepHours(timeString, currentRecord.wakeTime);
+    }
+  };
+
+  const handleWakeTimeChange = (event: any, selectedDate?: Date) => {
+    setShowWakeTimePicker(false);
+    if (selectedDate) {
+      setWakeTimeDate(selectedDate);
+      const timeString = selectedDate.toTimeString().slice(0, 5); // HH:MM format
+      setCurrentRecord(prev => ({ ...prev, wakeTime: timeString }));
+      calculateSleepHours(currentRecord.bedtime, timeString);
+    }
+  };
+
+  const calculateSleepHours = (bedtime?: string, wakeTime?: string) => {
+    if (bedtime && wakeTime) {
+      const [bedHour, bedMin] = bedtime.split(':').map(Number);
+      const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
+      
+      let bedTimeMinutes = bedHour * 60 + bedMin;
+      let wakeTimeMinutes = wakeHour * 60 + wakeMin;
+      
+      // Handle crossing midnight
+      if (wakeTimeMinutes < bedTimeMinutes) {
+        wakeTimeMinutes += 24 * 60; // Add 24 hours
+      }
+      
+      const totalMinutes = wakeTimeMinutes - bedTimeMinutes;
+      const totalHours = Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal
+      
+      setCurrentRecord(prev => ({ ...prev, totalHours }));
+    }
+  };
 
   const addSleepRecord = () => {
     if (!currentRecord.bedtime || !currentRecord.wakeTime || !currentRecord.quality) {
@@ -142,7 +237,7 @@ export default function SleepTracker() {
           <View style={styles.timeInputRow}>
             <View style={styles.timeInput}>
               <Text style={styles.inputLabel}>Bedtime</Text>
-              <TouchableOpacity style={styles.timeButton}>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setShowBedtimePicker(true)}>
                 <Text style={styles.timeButtonText}>
                   {currentRecord.bedtime || 'Set Time'}
                 </Text>
@@ -150,7 +245,7 @@ export default function SleepTracker() {
             </View>
             <View style={styles.timeInput}>
               <Text style={styles.inputLabel}>Wake Time</Text>
-              <TouchableOpacity style={styles.timeButton}>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setShowWakeTimePicker(true)}>
                 <Text style={styles.timeButtonText}>
                   {currentRecord.wakeTime || 'Set Time'}
                 </Text>
@@ -277,6 +372,86 @@ export default function SleepTracker() {
         <Text style={styles.tipText}>• Consistent sleep/wake times</Text>
         <Text style={styles.tipText}>• Dark, quiet sleeping environment</Text>
       </View>
+
+      {/* Time Pickers - Only show on mobile platforms */}
+      {Platform.OS !== 'web' && showBedtimePicker && (
+        <DateTimePicker
+          value={bedtimeDate}
+          mode="time"
+          is24Hour={false}
+          onChange={handleBedtimeChange}
+        />
+      )}
+      
+      {Platform.OS !== 'web' && showWakeTimePicker && (
+        <DateTimePicker
+          value={wakeTimeDate}
+          mode="time"
+          is24Hour={false}
+          onChange={handleWakeTimeChange}
+        />
+      )}
+
+      {/* Web fallback - Simple text input for time */}
+      {Platform.OS === 'web' && showBedtimePicker && (
+        <Modal visible={true} transparent={true} animationType="slide">
+          <View style={styles.webTimeModal}>
+            <View style={styles.webTimeContent}>
+              <Text style={styles.webTimeTitle}>Set Bedtime</Text>
+              <Text style={styles.webTimeLabel}>Enter time (HH:MM):</Text>
+              <TouchableOpacity 
+                style={styles.webTimeButton}
+                onPress={() => {
+                  const time = prompt('Enter bedtime (HH:MM format, e.g., 22:30)');
+                  if (time && time.match(/^\d{1,2}:\d{2}$/)) {
+                    setCurrentRecord(prev => ({ ...prev, bedtime: time }));
+                    calculateSleepHours(time, currentRecord.wakeTime);
+                  }
+                  setShowBedtimePicker(false);
+                }}
+              >
+                <Text style={styles.webTimeButtonText}>Enter Time</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.webTimeCancelButton}
+                onPress={() => setShowBedtimePicker(false)}
+              >
+                <Text style={styles.webTimeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {Platform.OS === 'web' && showWakeTimePicker && (
+        <Modal visible={true} transparent={true} animationType="slide">
+          <View style={styles.webTimeModal}>
+            <View style={styles.webTimeContent}>
+              <Text style={styles.webTimeTitle}>Set Wake Time</Text>
+              <Text style={styles.webTimeLabel}>Enter time (HH:MM):</Text>
+              <TouchableOpacity 
+                style={styles.webTimeButton}
+                onPress={() => {
+                  const time = prompt('Enter wake time (HH:MM format, e.g., 07:00)');
+                  if (time && time.match(/^\d{1,2}:\d{2}$/)) {
+                    setCurrentRecord(prev => ({ ...prev, wakeTime: time }));
+                    calculateSleepHours(currentRecord.bedtime, time);
+                  }
+                  setShowWakeTimePicker(false);
+                }}
+              >
+                <Text style={styles.webTimeButtonText}>Enter Time</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.webTimeCancelButton}
+                onPress={() => setShowWakeTimePicker(false)}
+              >
+                <Text style={styles.webTimeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </ScrollView>
   );
 }
@@ -576,5 +751,52 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 6,
     lineHeight: 20,
+  },
+  webTimeModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webTimeContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    minWidth: 280,
+    alignItems: 'center',
+  },
+  webTimeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#333',
+  },
+  webTimeLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  webTimeButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  webTimeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  webTimeCancelButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  webTimeCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

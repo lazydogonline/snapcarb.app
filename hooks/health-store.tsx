@@ -9,28 +9,51 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
   const [supplements, setSupplements] = useState<Supplement[]>(defaultSupplements);
   const [challenge, setChallenge] = useState<ChallengeDay[]>(challengeDays);
   const [isLoading, setIsLoading] = useState(true);
+  const [healthMetrics, setHealthMetrics] = useState({
+    glucoseLevel: 85,
+    waistMeasurement: 82,
+    fastingData: {
+      startTime: null as Date | null,
+      endTime: null as Date | null,
+      duration: 0,
+      isActive: false
+    },
+    programRules: {
+      noWheat: true,
+      noSugar: true,
+      noGrains: true
+    }
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [storedMeals, storedSupplements, storedChallenge] = await Promise.all([
+      console.log('loadData called - reloading from AsyncStorage...');
+      const [storedMeals, storedSupplements, storedChallenge, storedHealthMetrics] = await Promise.all([
         AsyncStorage.getItem('meals'),
         AsyncStorage.getItem('supplements'),
         AsyncStorage.getItem('challenge'),
+        AsyncStorage.getItem('health-metrics'),
       ]);
 
       if (storedMeals) setMeals(JSON.parse(storedMeals));
       if (storedSupplements) setSupplements(JSON.parse(storedSupplements));
-      if (storedChallenge) setChallenge(JSON.parse(storedChallenge));
+      if (storedChallenge) {
+        console.log('Loading fresh challenge data:', JSON.parse(storedChallenge).map(d => ({ day: d.day, completed: d.completed })));
+        setChallenge(JSON.parse(storedChallenge));
+      }
+      if (storedHealthMetrics) {
+        setHealthMetrics(JSON.parse(storedHealthMetrics));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const addMeal = useCallback(async (meal: Omit<Meal, 'id'>) => {
     const newMeal: Meal = {
@@ -100,16 +123,25 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
     await AsyncStorage.setItem('supplements', JSON.stringify(resetSupplements));
   }, [supplements]);
 
+  const updateHealthMetrics = useCallback(async (updates: Partial<typeof healthMetrics>) => {
+    const updatedMetrics = { ...healthMetrics, ...updates };
+    setHealthMetrics(updatedMetrics);
+    await AsyncStorage.setItem('health-metrics', JSON.stringify(updatedMetrics));
+  }, [healthMetrics]);
+
   return useMemo(() => ({
     meals,
     supplements,
     challenge,
     isLoading,
+    healthMetrics,
     addMeal,
     updateMeal,
     toggleSupplement,
     updateChallengeDay,
     getTodayProgress,
     resetDailySupplements,
-  }), [meals, supplements, challenge, isLoading, addMeal, updateMeal, toggleSupplement, updateChallengeDay, getTodayProgress, resetDailySupplements]);
+    updateHealthMetrics,
+    loadData,
+  }), [meals, supplements, challenge, isLoading, healthMetrics, addMeal, updateMeal, toggleSupplement, updateChallengeDay, getTodayProgress, resetDailySupplements, updateHealthMetrics, loadData]);
 });

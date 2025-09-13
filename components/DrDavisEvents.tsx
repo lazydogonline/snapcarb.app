@@ -64,7 +64,7 @@ const upcomingEvents: DrDavisEvent[] = [
     duration: '60 minutes',
     type: 'meetup',
     status: 'upcoming',
-    link: 'https://drdavisinfinitehealth.com/inner-circle',
+    link: 'https://innercircle.drdavisinfinitehealth.com/landing/',
     maxParticipants: 200,
     currentParticipants: 156,
     category: 'Community',
@@ -374,7 +374,7 @@ export default function DrDavisEvents() {
       {/* Call to Action */}
       <View style={styles.ctaContainer}>
         <LinearGradient
-          colors={['#10B981', '#059669']}
+          colors={['#22c55e', '#16a34a', '#15803d']}
           style={styles.ctaGradient}
         >
           <Text style={styles.ctaTitle}>Join the Inner Circle</Text>
@@ -383,7 +383,7 @@ export default function DrDavisEvents() {
           </Text>
           <TouchableOpacity
             style={styles.ctaButton}
-            onPress={() => Linking.openURL('https://drdavisinfinitehealth.com/inner-circle')}
+              onPress={() => Linking.openURL('https://innercircle.drdavisinfinitehealth.com/landing/')}
           >
             <Text style={styles.ctaButtonText}>Join Now - $19.95/month</Text>
           </TouchableOpacity>

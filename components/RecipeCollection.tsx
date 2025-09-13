@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, RefreshControl, Share, Linking, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   BookOpen, 
@@ -12,11 +12,16 @@ import {
   Clock,
   Users,
   TrendingUp,
-  Star
+  Star,
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Instagram,
+  Pinterest
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { SnapCarbRecipe } from '../services/gemini-ai-service';
-import { SupabaseRecipeService } from '../services/supabase-service';
+import { RecipeService } from '../services/recipe-service';
 import appDownloadLinks from '../config/app-links';
 
 const { width } = Dimensions.get('window');
@@ -46,7 +51,7 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
     try {
       setLoading(true);
       // Load recipes from Supabase
-      const userRecipes = await SupabaseRecipeService.getUserRecipes(userId);
+      const userRecipes = await RecipeService.getUserRecipes();
       setRecipes(userRecipes);
     } catch (error) {
       console.error('Error loading recipes:', error);
@@ -93,7 +98,7 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
     setFilteredRecipes(filtered);
   };
 
-  const handleShareRecipe = (recipe: SnapCarbRecipe) => {
+  const handleShareRecipe = async (recipe: SnapCarbRecipe) => {
     const message = `🍎 SnapCarb Recipe: ${recipe.title}
 
 📝 ${recipe.description}
@@ -109,10 +114,70 @@ ${recipe.instructions.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
 ${appDownloadLinks.getDownloadMessage()}`;
 
-    Alert.alert('Share Recipe', message, [
-      { text: 'Copy', onPress: () => Alert.alert('Copied!', 'Recipe copied to clipboard') },
-      { text: 'Cancel', style: 'cancel' }
-    ]);
+    try {
+      const result = await Share.share({
+        message: message,
+        title: `SnapCarb Recipe: ${recipe.title}`,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Recipe shared successfully');
+      }
+    } catch (error) {
+      console.error('Error sharing recipe:', error);
+      Alert.alert('Error', 'Failed to share recipe');
+    }
+  };
+
+  const handleSocialShare = (recipe: SnapCarbRecipe, platform: string) => {
+    const message = `Check out this amazing SnapCarb recipe: ${recipe.title}! 🍎\n\n${recipe.description}\n\nNet Carbs: ${recipe.netCarbs}g per serving\n\n${appDownloadLinks.getDownloadMessage()}`;
+    
+    let url = '';
+    let shareText = '';
+    
+    switch (platform) {
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appDownloadLinks.website)}&quote=${encodeURIComponent(message)}`;
+        break;
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(appDownloadLinks.website)}`;
+        break;
+      case 'whatsapp':
+        url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+        break;
+      case 'instagram':
+        // Instagram doesn't support direct URL sharing, so we'll copy to clipboard
+        Alert.alert('Instagram Share', 'Recipe details copied to clipboard! Paste them in your Instagram story or post.', [
+          { text: 'OK', onPress: () => Clipboard.setString(message) }
+        ]);
+        return;
+      case 'pinterest':
+        url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(appDownloadLinks.website)}&description=${encodeURIComponent(message)}`;
+        break;
+      default:
+        return;
+    }
+    
+    Linking.openURL(url).catch(err => {
+      console.error('Error opening social media app:', err);
+      Alert.alert('Error', 'Could not open the app. Please try sharing manually.');
+    });
+  };
+
+  const showShareOptions = (recipe: SnapCarbRecipe) => {
+    Alert.alert(
+      'Share Recipe',
+      'Choose how you want to share this recipe:',
+      [
+        { text: 'Native Share', onPress: () => handleShareRecipe(recipe) },
+        { text: 'Facebook', onPress: () => handleSocialShare(recipe, 'facebook') },
+        { text: 'X (Twitter)', onPress: () => handleSocialShare(recipe, 'twitter') },
+        { text: 'WhatsApp', onPress: () => handleSocialShare(recipe, 'whatsapp') },
+        { text: 'Instagram', onPress: () => handleSocialShare(recipe, 'instagram') },
+        { text: 'Pinterest', onPress: () => handleSocialShare(recipe, 'pinterest') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const handleDeleteRecipe = async (recipeId: string) => {
@@ -126,7 +191,7 @@ ${appDownloadLinks.getDownloadMessage()}`;
           style: 'destructive',
           onPress: async () => {
             try {
-              await SupabaseRecipeService.deleteRecipe(recipeId);
+              await RecipeService.deleteRecipe(recipeId);
               setRecipes(recipes.filter(r => r.id !== recipeId));
               Alert.alert('Success', 'Recipe deleted successfully');
             } catch (error) {
@@ -149,7 +214,7 @@ ${appDownloadLinks.getDownloadMessage()}`;
       setRecipes(updatedRecipes);
       
       // Update in Supabase
-      await SupabaseRecipeService.updateRecipe(recipeId, { isFavorite: !recipes.find(r => r.id === recipeId)?.isFavorite });
+      await RecipeService.updateRecipe(recipeId, { isFavorite: !recipes.find(r => r.id === recipeId)?.isFavorite });
     } catch (error) {
       console.error('Error updating favorite:', error);
     }
@@ -263,7 +328,7 @@ ${appDownloadLinks.getDownloadMessage()}`;
       <View style={styles.recipeActions}>
         <TouchableOpacity 
           style={styles.actionButton} 
-          onPress={() => handleShareRecipe(recipe)}
+          onPress={() => showShareOptions(recipe)}
         >
           <Share2 size={16} color={colors.primary} />
           <Text style={styles.actionButtonText}>Share</Text>
@@ -351,12 +416,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
             <BookOpen size={64} color={colors.textSecondary} />
             <Text style={styles.emptyStateTitle}>No recipes found</Text>
             <Text style={styles.emptyStateText}>
-              {searchQuery ? 'Try adjusting your search' : 'Start building your collection by saving recipes'}
+              {searchQuery ? 'Try adjusting your search' : 'Use the "Add New Recipe" button below to start building your collection'}
             </Text>
-            <TouchableOpacity style={styles.addFirstButton}>
-              <Plus size={20} color={colors.background} />
-              <Text style={styles.addFirstButtonText}>Add Your First Recipe</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           filteredRecipes.map(renderRecipeCard)
@@ -379,9 +440,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    paddingBottom: 30,
+    padding: 15,
+    paddingTop: 20,
+    paddingBottom: 15,
   },
   headerTop: {
     flexDirection: 'row',
@@ -389,7 +450,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.background,
     marginLeft: 12,
@@ -401,7 +462,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 15,
     gap: 12,
   },
   searchContainer: {
@@ -540,7 +601,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    padding: 40,
+    padding: 20,
   },
   emptyStateTitle: {
     fontSize: 20,
@@ -554,20 +615,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
-  },
-  addFirstButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addFirstButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.background,
-    marginLeft: 8,
   },
   addButton: {
     flexDirection: 'row',

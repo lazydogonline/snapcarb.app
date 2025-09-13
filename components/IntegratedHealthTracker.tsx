@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   innerCircleButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#22c55e',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

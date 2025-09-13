@@ -1,20 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
 import { CheckCircle, Circle, Calendar, Edit3 } from 'lucide-react-native';
 import { useHealth } from '@/hooks/health-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ChallengeScreen() {
-  const { challenge, updateChallengeDay, meals } = useHealth();
+  const { challenge, updateChallengeDay, meals, loadData } = useHealth();
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [symptoms, setSymptoms] = useState('');
   const [notes, setNotes] = useState('');
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   const completedDays = challenge.filter(day => day.completed).length;
 
   const progressPercentage = (completedDays / 10) * 100;
 
   const handleEditDay = (day: number) => {
+    console.log('handleEditDay called for day:', day);
+    console.log('canCompleteDay result:', canCompleteDay(day));
+    
+    // For current day or already completed days, always allow editing
     const dayData = challenge.find(d => d.day === day);
+    const status = getDayStatus(dayData);
+    
+    if (status === 'current' || status === 'completed') {
+      console.log('Allowing edit for day:', day);
+      if (dayData) {
+        setSymptoms(dayData.symptoms.join(', '));
+        setNotes(dayData.notes);
+        setEditingDay(day);
+      }
+      return;
+    }
+    
+    if (!canCompleteDay(day)) {
+      Alert.alert(
+        'Cannot Complete Day',
+        'You must complete the previous day first. The challenge must be done in sequential order without skipping days.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (dayData) {
       setSymptoms(dayData.symptoms.join(', '));
       setNotes(dayData.notes);
@@ -26,15 +53,11 @@ export default function ChallengeScreen() {
     if (editingDay === null) return;
 
     const symptomsArray = symptoms.split(',').map(s => s.trim()).filter(s => s);
-    const todayMeals = meals.filter(meal => 
-      new Date(meal.timestamp).toDateString() === new Date().toDateString()
-    );
 
     await updateChallengeDay(editingDay, {
       symptoms: symptomsArray,
       notes,
       symptomsNoted: symptomsArray.length > 0,
-      mealsLogged: todayMeals.length,
       completed: true,
     });
 
@@ -42,6 +65,78 @@ export default function ChallengeScreen() {
     setSymptoms('');
     setNotes('');
     Alert.alert('Success', 'Day updated successfully!');
+  };
+
+  const handleResetChallenge = () => {
+    console.log('Reset button clicked');
+    Alert.alert(
+      'Reset Challenge',
+      'This will reset your entire challenge progress. You can start fresh from Day 1. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          style: 'destructive',
+          onPress: () => {
+            console.log('User confirmed reset - calling resetChallengeData');
+            resetChallengeData();
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const resetChallengeData = async () => {
+    console.log('Starting challenge reset...');
+    
+    try {
+      // Clear any editing state first
+      setEditingDay(null);
+      setSymptoms('');
+      setNotes('');
+      
+      // Create a fresh challenge array with all days reset  
+      const resetChallenge = [];
+      const today = new Date();
+      console.log('Reset: Today is', today.toDateString());
+      console.log('Reset: Today full date:', today);
+      
+      for (let dayNum = 1; dayNum <= 10; dayNum++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + dayNum - 1);
+        console.log(`Reset: Day ${dayNum} will be set to`, date.toDateString());
+        
+        resetChallenge.push({
+          day: dayNum,
+          date: date.toDateString(),
+          completed: false,
+          symptoms: [],
+          notes: '',
+          symptomsNoted: false,
+          mealsLogged: 0,
+          netCarbsTotal: 0,
+          adherenceScore: 0
+        });
+      }
+      
+      console.log('Saving fresh challenge data to AsyncStorage...');
+      
+      // Save directly to AsyncStorage
+      await AsyncStorage.setItem('challenge', JSON.stringify(resetChallenge));
+      
+      console.log('Challenge reset complete, reloading data...');
+      
+      // Reload data from AsyncStorage to refresh the UI
+      await loadData();
+      
+      console.log('Data reloaded successfully!');
+      Alert.alert('Challenge Reset', 'Your challenge has been reset successfully!');
+      
+    } catch (error) {
+      console.error('Error resetting challenge:', error);
+      Alert.alert('Error', `Failed to reset challenge: ${error.message}`);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -65,9 +160,43 @@ export default function ChallengeScreen() {
     return 'upcoming';
   };
 
+  const canCompleteDay = (dayNumber: number) => {
+    // Can only complete day 1, or if previous day is completed
+    if (dayNumber === 1) return true;
+    const previousDay = challenge.find(d => d.day === dayNumber - 1);
+    return previousDay?.completed || false;
+  };
+
+  const getChallengeStatusColor = () => {
+    const missedDays = challenge.filter(day => {
+      const dayDate = new Date(day.date);
+      const today = new Date();
+      const isPast = dayDate < today;
+      return isPast && !day.completed;
+    }).length;
+
+    if (missedDays > 0) return '#ef4444'; // Red - bad (missed days)
+    if (completedDays >= 7) return '#22c55e'; // Green - good (7+ days)
+    return '#f59e0b'; // Orange - mediocre (in progress)
+  };
+
+  const getChallengeStatusText = () => {
+    const missedDays = challenge.filter(day => {
+      const dayDate = new Date(day.date);
+      const today = new Date();
+      const isPast = dayDate < today;
+      return isPast && !day.completed;
+    }).length;
+
+    if (missedDays > 0) return 'Reset Required';
+    if (completedDays === 10) return 'Completed!';
+    if (completedDays >= 7) return 'Almost There!';
+    return 'In Progress';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: getChallengeStatusColor() }]}>
         <Text style={styles.headerTitle}>10-Day Detox Challenge</Text>
         <Text style={styles.headerSubtitle}>
           {completedDays}/10 days completed ({progressPercentage.toFixed(0)}%)
@@ -78,108 +207,41 @@ export default function ChallengeScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {editingDay && (
-          <>
-            {/* Must Know Section - DR Davis Program Insights */}
-            <View style={styles.mustKnowSection}>
-              <Text style={styles.mustKnowTitle}>💡 Must Know: Your Path to Extraordinary Health</Text>
-              <Text style={styles.mustKnowText}>
-                {editingDay <= 7 ? 
-                  "You're in the detox/withdrawal phase. This is normal and temporary - like having the flu. Focus on hydration, salt your food, and pamper yourself. Symptoms typically resolve in 5-7 days." :
-                  "Great progress! You're past the toughest part. Continue with simple meals and supplements. Your body is healing and you should be feeling better now."
-                }
-              </Text>
-              
-              <View style={styles.mustKnowTips}>
-                <Text style={styles.mustKnowTipTitle}>Key Tips for Day {editingDay}:</Text>
-                {editingDay === 1 && (
-                  <Text style={styles.mustKnowTip}>• Start supplements: Vitamin D, Fish Oil, Magnesium, Iodine, Probiotic</Text>
-                )}
-                {editingDay === 3 && (
-                  <Text style={styles.mustKnowTip}>• Add 10g prebiotic fibers daily (inulin, jicama, small legumes)</Text>
-                )}
-                {editingDay === 10 && (
-                  <Text style={styles.mustKnowTip}>• Increase prebiotic fibers to 20g daily</Text>
-                )}
-                <Text style={styles.mustKnowTip}>• Keep meals simple - familiar dishes only</Text>
-                <Text style={styles.mustKnowTip}>• Hydrate more than usual, salt food lightly</Text>
-                <Text style={styles.mustKnowTip}>• Avoid strenuous exercise, light walking is fine</Text>
-              </View>
-              
-              <TouchableOpacity 
-                style={styles.innerCircleButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Join DR Davis Inner Circle',
-                    'Get complete program details, live meetups with Dr. Davis, exclusive recipes, and ongoing support for your health journey.',
-                    [
-                      { text: 'Learn More', onPress: () => {
-                        Alert.alert('Inner Circle', 'Visit: https://innercircle.undoctored.com/');
-                      }},
-                      { text: 'Maybe Later', style: 'cancel' }
-                    ]
-                  );
-                }}
-              >
-                <Text style={styles.innerCircleButtonText}>🌟 Get Complete DR Davis Program Details</Text>
-                <Text style={styles.innerCircleSubtext}>Join Inner Circle for Live Meetups & Full Support</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editForm}>
-              <Text style={styles.formTitle}>Day {editingDay} Check-in</Text>
-            
-            <Text style={styles.inputLabel}>Symptoms (comma separated)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., headache, fatigue, improved energy"
-              value={symptoms}
-              onChangeText={setSymptoms}
-              multiline
-            />
-            
-            <Text style={styles.inputLabel}>Notes</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="How are you feeling? Any observations?"
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={3}
-            />
-            
-            <View style={styles.formButtons}>
-              <TouchableOpacity 
-                style={[styles.button, styles.cancelButton]} 
-                onPress={() => setEditingDay(null)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={handleSaveDay}>
-                <Text style={styles.buttonText}>Save Check-in</Text>
-              </TouchableOpacity>
-                          </View>
-            </View>
-          </>
-        )}
-
-        <Text style={styles.sectionTitle}>Challenge Progress</Text>
-
+        {/* Challenge Progress Section - Always at top */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Challenge Progress</Text>
+          <View style={styles.resetButtons}>
+            <TouchableOpacity 
+              style={styles.resetButtonSmall} 
+              onPress={() => {
+                console.log('Direct reset button touched!');
+                resetChallengeData();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.resetButtonSmallText}>Reset Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
         {challenge.map((day) => {
           const status = getDayStatus(day);
           return (
-            <View key={day.day} style={[
-              styles.dayCard,
-              status === 'completed' && styles.dayCardCompleted,
-              status === 'current' && styles.dayCardCurrent,
-              status === 'missed' && styles.dayCardMissed,
-            ]}>
+            <View
+              key={`${day.day}-${forceUpdate}`}
+              style={[
+                styles.dayCard,
+                status === 'completed' && styles.dayCardCompleted,
+                status === 'current' && styles.dayCardCurrent,
+                status === 'missed' && styles.dayCardMissed,
+              ]}
+            >
               <View style={styles.dayHeader}>
                 <View style={styles.dayInfo}>
                   <Text style={[
                     styles.dayTitle,
                     status === 'completed' && styles.dayTitleCompleted,
-                    status === 'current' && styles.dayTitleCurrent,
+                    status === 'missed' && styles.dayTitleMissed
                   ]}>
                     Day {day.day}
                   </Text>
@@ -187,15 +249,17 @@ export default function ChallengeScreen() {
                 </View>
                 
                 <View style={styles.dayActions}>
-                  {status === 'current' && (
-                    <TouchableOpacity 
+                  {(status === 'current' || status === 'completed') && (
+                    <TouchableOpacity
                       style={styles.editButton}
-                      onPress={() => handleEditDay(day.day)}
+                      onPress={() => {
+                        console.log('Edit button pressed for day:', day.day);
+                        handleEditDay(day.day);
+                      }}
                     >
-                      <Edit3 color="#f59e0b" size={20} />
+                      <Edit3 color="#6b7280" size={20} />
                     </TouchableOpacity>
                   )}
-                  
                   {status === 'completed' ? (
                     <CheckCircle color="#22c55e" size={28} />
                   ) : status === 'current' ? (
@@ -210,17 +274,6 @@ export default function ChallengeScreen() {
 
               {day.completed && (
                 <View style={styles.dayDetails}>
-                  <View style={styles.dayStats}>
-                    <View style={styles.stat}>
-                      <Text style={styles.statValue}>{day.mealsLogged}</Text>
-                      <Text style={styles.statLabel}>Meals</Text>
-                    </View>
-                    <View style={styles.stat}>
-                      <Text style={styles.statValue}>{day.symptoms.length}</Text>
-                      <Text style={styles.statLabel}>Symptoms</Text>
-                    </View>
-                  </View>
-                  
                   {day.symptoms.length > 0 && (
                     <View style={styles.symptomsSection}>
                       <Text style={styles.symptomsTitle}>Symptoms:</Text>
@@ -236,6 +289,12 @@ export default function ChallengeScreen() {
                       <Text style={styles.notesText}>{day.notes}</Text>
                     </View>
                   )}
+                  
+                  {!day.symptoms.length && !day.notes && (
+                    <View style={styles.completedMessage}>
+                      <Text style={styles.completedText}>✅ Day completed</Text>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -247,9 +306,75 @@ export default function ChallengeScreen() {
                   </Text>
                 </View>
               )}
+
+              {/* Show edit form right after the day being edited */}
+              {editingDay === day.day && (
+                <View style={styles.editFormInline}>
+                  <Text style={styles.formTitle}>Day {editingDay} Check-in</Text>
+                
+                  <Text style={styles.inputLabel}>Symptoms (comma separated)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., headache, fatigue, improved energy"
+                    value={symptoms}
+                    onChangeText={setSymptoms}
+                    multiline
+                  />
+                  
+                  <Text style={styles.inputLabel}>Notes</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="How are you feeling? Any observations?"
+                    value={notes}
+                    onChangeText={setNotes}
+                    multiline
+                    numberOfLines={3}
+                  />
+                  
+                  <View style={styles.formActions}>
+                    <TouchableOpacity 
+                      style={styles.cancelButton}
+                      onPress={() => {
+                        setEditingDay(null);
+                        setSymptoms('');
+                        setNotes('');
+                      }}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.saveButton}
+                      onPress={handleSaveDay}
+                    >
+                      <Text style={styles.saveButtonText}>Save Check-in</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           );
         })}
+
+        {/* Warning for missed days */}
+        {challenge.some(day => {
+          const dayDate = new Date(day.date);
+          const today = new Date();
+          const isPast = dayDate < today;
+          return isPast && !day.completed;
+        }) && (
+          <View style={styles.warningBanner}>
+            <Text style={styles.warningTitle}>⚠️ Challenge Needs Reset</Text>
+            <Text style={styles.warningText}>
+              You've missed one or more days. The challenge must be completed sequentially without skipping days.
+            </Text>
+            <TouchableOpacity style={styles.resetButton} onPress={handleResetChallenge}>
+              <Text style={styles.resetButtonText}>Reset Challenge</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+
 
         <View style={styles.challengeInfo}>
           <Text style={styles.sectionTitle}>Challenge Guidelines</Text>
@@ -283,8 +408,18 @@ export default function ChallengeScreen() {
             </Text>
             <TouchableOpacity 
               style={styles.guidelineLinkButton}
-              onPress={() => {
-                Alert.alert('Inner Circle', 'Visit: https://innercircle.undoctored.com/');
+              onPress={async () => {
+                try {
+                  const url = 'https://innercircle.drdavisinfinitehealth.com/landing/';
+                  const supported = await Linking.canOpenURL(url);
+                  if (supported) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert('Error', 'Unable to open link. Please visit: https://innercircle.drdavisinfinitehealth.com/landing/');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Unable to open link. Please visit: https://innercircle.drdavisinfinitehealth.com/landing/');
+                }
               }}
             >
               <Text style={styles.guidelineLinkText}>Learn More About DR Davis Program</Text>
@@ -302,11 +437,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#f59e0b',
     padding: 24,
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   headerTitle: {
     fontSize: 24,
@@ -459,7 +591,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
   },
   dayDetails: {
     marginTop: 12,
@@ -586,12 +721,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   innerCircleButton: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#22c55e',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#d97706',
+    borderColor: '#16a34a',
   },
   innerCircleButtonText: {
     fontSize: 16,
@@ -607,7 +742,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   guidelineLinkButton: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#22c55e',
     borderRadius: 8,
     padding: 8,
     marginTop: 12,
@@ -617,5 +752,134 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  warningBanner: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#7f1d1d',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  resetButton: {
+    backgroundColor: '#dc2626',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  editFormInline: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+    minHeight: 44,
+  },
+  textArea: {
+    minHeight: 88,
+    textAlignVertical: 'top',
+  },
+  formActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#22c55e',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resetButtonSmall: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  resetButtonSmallText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  resetButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  completedMessage: {
+    padding: 12,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  completedText: {
+    fontSize: 14,
+    color: '#22c55e',
+    fontWeight: '600',
   },
 });

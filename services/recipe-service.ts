@@ -1,5 +1,6 @@
 import { estimateCarbsFromImage, generateSnapCarbRecipe } from './gemini-ai-service';
 import { FoodSearchService } from './food-search-service';
+import { USDANutritionService } from './usda-nutrition-service';
 
 export interface SnapCarbRecipe {
   id: string;
@@ -21,7 +22,6 @@ export interface SnapCarbRecipe {
   }[];
   instructions: string[];
   nutrition: {
-    calories: number;
     protein: number;
     fat: number;
     fiber: number;
@@ -30,6 +30,8 @@ export interface SnapCarbRecipe {
   tags: string[];
   source: string;
   imageUrl?: string;
+  isFavorite?: boolean;
+  createdAt?: string;
   coolFacts?: {
     vitamin_k2?: string;
     omega_3?: string;
@@ -68,7 +70,6 @@ export class RecipeService {
         
         // Update the recipe with real nutrition data
         recipe.nutrition = {
-          calories: realNutrition.calories,
           protein: realNutrition.protein_g,
           fat: realNutrition.fat_g,
           fiber: realNutrition.fiber_g,
@@ -115,6 +116,22 @@ export class RecipeService {
     return [];
   }
 
+  static async getUserRecipes(): Promise<SnapCarbRecipe[]> {
+    // TODO: Implement user recipe retrieval from Supabase
+    // For now, return empty array
+    return [];
+  }
+
+  static async deleteRecipe(recipeId: string): Promise<void> {
+    // TODO: Implement recipe deletion from Supabase
+    console.log('Deleting recipe:', recipeId);
+  }
+
+  static async updateRecipe(recipeId: string, updates: Partial<SnapCarbRecipe>): Promise<void> {
+    // TODO: Implement recipe update in Supabase
+    console.log('Updating recipe:', recipeId, updates);
+  }
+
   /**
    * Calculate accurate nutrition for a recipe using USDA data from Supabase
    */
@@ -124,7 +141,6 @@ export class RecipeService {
   }>, servings: number): Promise<{
     net_carbs_g: number;
     fiber_g: number;
-    calories: number;
     protein_g: number;
     fat_g: number;
   }> {
@@ -138,45 +154,45 @@ export class RecipeService {
       fat_g: number;
     }> = [];
 
-    // Get nutrition for each ingredient
+    // Get nutrition for each ingredient using the working FoodSearchService
     for (const ingredient of ingredients) {
       try {
-        // Search USDA database for the ingredient using our FoodSearchService
-        const searchResults = await FoodSearchService.searchFoods(ingredient.name);
+        // Split the ingredient name to get the USDA search term
+        const [displayName, usdaName] = ingredient.name.split('|');
+        const searchTerm = usdaName ? usdaName.trim() : ingredient.name;
+        
+        console.log(`🔍 Getting nutrition for: "${searchTerm}"`);
+        
+        // Search using the working FoodSearchService (direct table access)
+        const foodSearchService = new FoodSearchService();
+        const searchResults = await foodSearchService.searchFoods(searchTerm);
         
         if (searchResults.length > 0) {
           // Get the first (best) match
           const food = searchResults[0];
           
-          // Parse the amount to get grams (assuming most amounts are in grams)
+          // Parse the amount to get grams
           const grams = this.parseAmountToGrams(ingredient.amount);
           
           // Calculate nutrition for the specific amount (per 100g basis)
           const ingredientNutrition = {
-            name: ingredient.name,
+            name: displayName || ingredient.name,
             amount: ingredient.amount,
-            net_carbs_g: (food.nutrition.net_carbs * grams) / 100,
-            fiber_g: (food.nutrition.fiber * grams) / 100,
-            calories: (food.nutrition.calories * grams) / 100,
-            protein_g: (food.nutrition.protein * grams) / 100,
-            fat_g: (food.nutrition.fat * grams) / 100
+            net_carbs_g: (food.net_carbs * grams) / 100,
+            fiber_g: (food.fiber * grams) / 100,
+            calories: (food.calories * grams) / 100,
+            protein_g: (food.protein * grams) / 100,
+            fat_g: (food.fat * grams) / 100
           };
           
           nutritionData.push(ingredientNutrition);
+          
+          console.log(`✅ Got nutrition for ${displayName || ingredient.name}: ${ingredientNutrition.calories} cal, ${ingredientNutrition.protein_g}g protein`);
         } else {
-          // Use fallback values if ingredient not found
-          nutritionData.push({
-            name: ingredient.name,
-            amount: ingredient.amount,
-            net_carbs_g: 0,
-            fiber_g: 0,
-            calories: 0,
-            protein_g: 0,
-            fat_g: 0
-          });
+          throw new Error('No food found');
         }
       } catch (error) {
-        console.error(`Error getting nutrition for ${ingredient.name}:`, error);
+        console.error(`❌ Error getting nutrition for ${ingredient.name}:`, error);
         // Use fallback values if USDA lookup fails
         nutritionData.push({
           name: ingredient.name,

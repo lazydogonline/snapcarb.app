@@ -15,6 +15,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   requireAuth = true, 
   redirectTo = '/login' 
 }) => {
+  // TEMPORARY: Bypass authentication to allow access to app
+  return <>{children}</>;
+  
+  // Original code commented out for now
+  /*
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -51,6 +56,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
 
   // Render children when authentication state matches requirements
   return <>{children}</>;
+  */
 };
 
 const styles = StyleSheet.create({

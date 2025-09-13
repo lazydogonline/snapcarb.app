@@ -24,7 +24,6 @@ export interface SnapCarbRecipe {
   }[];
   instructions: string[];
   nutrition: {
-    calories: number;
     protein: number;
     fat: number;
     fiber: number;
@@ -32,7 +31,7 @@ export interface SnapCarbRecipe {
   };
   tags: string[];
   source: string;
-  coolFacts?: {
+  coolFacts: {
     vitamin_k2?: string;
     omega_3?: string;
     cla?: string;
@@ -48,34 +47,30 @@ export async function estimateCarbsFromImage(base64Image: string): Promise<MealN
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+  const prompt = `Analyze this food image and estimate the carbohydrate content. Return ONLY valid JSON in this format:
+{
+  "total_carbs_g": 25.5,
+  "items": [
+    {
+      "name": "Food item name",
+      "carbs_g": 12.3,
+      "portion_description": "1 cup",
+      "confidence": 0.85
+    }
+  ],
+  "notes": "Additional observations"
+}`;
+
   const body = {
     generationConfig: {
       response_mime_type: "application/json",
-      // Optional: nudge for concise numeric outputs
-      temperature: 0.2,
+      temperature: 0.3,
     },
     contents: [
       {
         parts: [
-          {
-            text:
-`You are a nutritionist. Identify foods in the photo and estimate carbohydrates in grams.
-Return ONLY JSON with:
-{
-  "total_carbs_g": number,
-  "items": [
-    {"name": string, "carbs_g": number, "portion_description": string, "confidence": 0-1}
-  ],
-  "notes": string (optional)
-}
-Assume common restaurant/home portions. If uncertain, reflect that in lower confidence.`
-          },
-          {
-            inlineData: {
-              mimeType: "image/jpeg", // or image/png if that's what you pass
-              data: base64Image
-            }
-          }
+          { text: prompt },
+          { inline_data: { mime_type: "image/jpeg", data: base64Image } }
         ]
       }
     ]
@@ -93,7 +88,6 @@ Assume common restaurant/home portions. If uncertain, reflect that in lower conf
   }
 
   const data = await res.json();
-  // Gemini v1beta JSON output is in candidates[0].content.parts[0].text
   const jsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   return JSON.parse(jsonText) as MealNutrition;
 }
@@ -125,57 +119,66 @@ These ingredients ARE allowed:
 QUALITY STANDARDS - Always prioritize:
 - Grass-fed beef and lamb (better omega-3s, CLA, no antibiotics)
 - Pasture-raised chickens and eggs (more nutrients, better taste)
-- Wild-caught fish (sustainable, no farm chemicals)
-- Organic vegetables (no pesticides, better nutrition)
-- Sustainable sourcing (better for animals, planet, and you)
+- Wild-caught fish (higher omega-3s, no mercury concerns)
+- Organic vegetables (no pesticides, more nutrients)
+- Full-fat dairy (better satiety, more nutrients)
 
-PHILOSOPHY: "Eat Less, Better Quality" - Choose ingredients that respect animal welfare and environmental sustainability.
+NUTRITION TARGETS:
+- Net carbs: ${maxCarbs}g or less per serving
+- Protein: 20-40g per serving
+- Fat: 15-30g per serving
+- Fiber: 3-8g per serving
 
-Requirements:
-- Recipe must be DELICIOUS and restaurant-quality
-- Maximum ${maxCarbs} NET carbs per serving (total carbs minus fiber)
-- Include detailed, professional cooking instructions
-- Use high-quality, sustainable ingredients
-- Add interesting "cool facts" about nutritional benefits
-- Make it unique and creative - not a generic recipe
+SERVING REQUIREMENTS - NEVER suggest these forbidden serving options:
+- NO crackers, bread, toast, or any wheat-based items
+- NO rice cakes, corn chips, or grain-based snacks
+- NO pasta, noodles, or grain-based accompaniments
 
-Return ONLY a JSON object with this exact structure:
+ALWAYS suggest SnapCarb-compliant serving options:
+- Lettuce cups, cabbage leaves, or other leafy greens
+- Cucumber slices, bell pepper strips, or other low-carb vegetables
+- Cheese crisps, pork rinds, or other grain-free alternatives
+- Serve directly on a plate or in a bowl
+
+OUTPUT FORMAT - Return ONLY valid JSON in this exact structure:
 {
-  "id": "unique-recipe-id",
-  "title": "Creative Recipe Title",
-  "description": "Mouthwatering description",
+  "id": "unique-recipe-id-1",
+  "title": "Recipe Name",
+  "description": "Brief description of the dish",
   "difficulty": "Easy|Medium|Hard",
-  "prepTime": number,
-  "cookTime": number,
-  "totalTime": number,
-  "servings": number,
-  "netCarbs": number,
+  "prepTime": 15,
+  "cookTime": 30,
+  "totalTime": 45,
+  "servings": 4,
+  "netCarbs": 12,
   "ingredients": [
     {
-      "name": "Ingredient name with quality descriptor",
-      "amount": "Specific amount",
-      "net_carbs_g": number,
-      "fiber_g": number,
+      "name": "Ingredient Name|Display Name",
+      "amount": "1 cup",
+      "net_carbs_g": 2,
+      "fiber_g": 1,
       "isAllowed": true,
-      "swapSuggestion": "Alternative if needed"
+      "swapSuggestion": "Alternative ingredient"
     }
   ],
-  "instructions": ["Detailed step 1", "Detailed step 2"],
+  "instructions": [
+    "Step 1: Do this",
+    "Step 2: Do that"
+  ],
   "nutrition": {
-    "calories": number,
-    "protein": number,
-    "fat": number,
-    "fiber": number,
-    "netCarbs": number
+    "protein": 25,
+    "fat": 20,
+    "fiber": 5,
+    "netCarbs": 12
   },
-  "tags": ["low-carb", "snapcarb-approved", "high-protein", "gourmet"],
+  "tags": ["low-carb", "snapcarb-approved", "high-protein"],
   "source": "SnapCarb Chef Collection",
   "coolFacts": {
-    "vitamin_k2": "Interesting fact about K2",
-    "omega_3": "Interesting fact about omega-3s",
-    "cla": "Interesting fact about CLA",
-    "sustainability": "Environmental benefit",
-    "gut_health": "Digestive health benefit",
+    "vitamin_k2": "Health benefit description",
+    "omega_3": "Health benefit description",
+    "cla": "Health benefit description",
+    "sustainability": "Sustainability note",
+    "gut_health": "Gut health benefit",
     "anti_inflammatory": "Anti-inflammatory benefit"
   }
 }
@@ -185,8 +188,8 @@ Make this recipe AMAZING - it should be something people want to cook and eat!`;
   const body = {
     generationConfig: {
       response_mime_type: "application/json",
-      temperature: 0.8, // Creative but consistent
-      maxOutputTokens: 4000, // Ensure enough tokens for complete recipe
+      temperature: 0.8,
+      maxOutputTokens: 4000,
     },
     contents: [
       {
@@ -214,8 +217,20 @@ Make this recipe AMAZING - it should be something people want to cook and eat!`;
     const data = await res.json();
     const jsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     
+    console.log('🤖 Raw Gemini response:', jsonText);
+    
     // Parse the AI-generated recipe
-    const recipe = JSON.parse(jsonText) as SnapCarbRecipe;
+    let recipe: SnapCarbRecipe;
+    try {
+      recipe = JSON.parse(jsonText) as SnapCarbRecipe;
+    } catch (parseError) {
+      console.error('❌ JSON Parse Error:', parseError);
+      console.error('❌ JSON text:', jsonText);
+      
+      // Try to extract essential data as fallback
+      const essentialData = extractEssentialRecipeData(jsonText);
+      recipe = essentialData as SnapCarbRecipe;
+    }
     
     // Validate and enhance the recipe
     if (!recipe.title || !recipe.ingredients || !recipe.instructions) {
@@ -234,6 +249,81 @@ Make this recipe AMAZING - it should be something people want to cook and eat!`;
   }
 }
 
+/**
+ * Extract essential recipe data from truncated or malformed JSON
+ */
+function extractEssentialRecipeData(jsonText: string): Partial<SnapCarbRecipe> {
+  const recipe: Partial<SnapCarbRecipe> = {
+    id: `recipe-${Date.now()}`,
+    title: 'Generated Recipe',
+    description: 'A delicious SnapCarb recipe',
+    difficulty: 'Medium' as const,
+    prepTime: 20,
+    cookTime: 30,
+    totalTime: 50,
+    servings: 2,
+    netCarbs: 10,
+    ingredients: [],
+    instructions: [],
+    nutrition: { protein: 25, fat: 20, fiber: 5, netCarbs: 10 },
+    tags: ['low-carb', 'snapcarb-approved'],
+    source: 'SnapCarb Chef Collection',
+    coolFacts: {}
+  };
+
+  try {
+    // Try to extract title
+    const titleMatch = jsonText.match(/"title":\s*"([^"]+)"/);
+    if (titleMatch) {
+      recipe.title = titleMatch[1];
+    }
+
+    // Try to extract description
+    const descMatch = jsonText.match(/"description":\s*"([^"]+)"/);
+    if (descMatch) {
+      recipe.description = descMatch[1];
+    }
+
+    // Try to extract ingredients array
+    const ingredientsMatch = jsonText.match(/"ingredients":\s*\[(.*?)\]/s);
+    if (ingredientsMatch) {
+      try {
+        const ingredientsJson = '[' + ingredientsMatch[1] + ']';
+        recipe.ingredients = JSON.parse(ingredientsJson);
+      } catch (e) {
+        console.log('Could not parse ingredients, using empty array');
+      }
+    }
+
+    // Try to extract instructions array
+    const instructionsMatch = jsonText.match(/"instructions":\s*\[(.*?)\]/s);
+    if (instructionsMatch) {
+      try {
+        const instructionsJson = '[' + instructionsMatch[1] + ']';
+        recipe.instructions = JSON.parse(instructionsJson);
+      } catch (e) {
+        console.log('Could not parse instructions, using empty array');
+      }
+    }
+
+    // Try to extract nutrition
+    const nutritionMatch = jsonText.match(/"nutrition":\s*\{([^}]+)\}/);
+    if (nutritionMatch) {
+      try {
+        const nutritionJson = '{' + nutritionMatch[1] + '}';
+        recipe.nutrition = JSON.parse(nutritionJson);
+      } catch (e) {
+        console.log('Could not parse nutrition, using defaults');
+      }
+    }
+
+  } catch (error) {
+    console.error('Error extracting essential data:', error);
+  }
+
+  return recipe;
+}
+
 // Enhanced function for SnapCarb specific analysis
 export async function analyzeMealForSnapCarb(base64Image: string): Promise<{
   nutrition: MealNutrition;
@@ -244,85 +334,113 @@ export async function analyzeMealForSnapCarb(base64Image: string): Promise<{
     recommendations: string[];
   };
 }> {
+  const nutrition = await estimateCarbsFromImage(base64Image);
+  
+  // Simple compliance scoring
+  const score = Math.max(1, Math.min(10, 10 - (nutrition.total_carbs_g / 5)));
+  const isCompliant = nutrition.total_carbs_g <= 20;
+  
+  const warnings: string[] = [];
+  const recommendations: string[] = [];
+  
+  if (nutrition.total_carbs_g > 20) {
+    warnings.push(`High carb content: ${nutrition.total_carbs_g}g`);
+    recommendations.push('Consider reducing portion size or choosing lower-carb alternatives');
+  }
+  
+  if (nutrition.total_carbs_g > 50) {
+    warnings.push('Very high carb content - not SnapCarb compliant');
+    recommendations.push('This meal exceeds SnapCarb guidelines');
+  }
+  
+  return {
+    nutrition,
+    compliance: {
+      score,
+      isCompliant,
+      warnings,
+      recommendations
+    }
+  };
+}
+
+/**
+ * Check if an ingredient is SnapCarb compliant using AI
+ */
+export async function checkIngredientCompliance(ingredientName: string, netCarbsPer100g: number): Promise<{
+  isAllowed: boolean;
+  reason: string;
+  swapSuggestion?: string;
+}> {
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  if (!apiKey) {
+    // Fallback to simple rules if no API key
+    return {
+      isAllowed: netCarbsPer100g <= 5,
+      reason: netCarbsPer100g <= 5 ? 'Low carb content' : 'High carb content'
+    };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const prompt = `You are a SnapCarb diet expert. Analyze this ingredient for SnapCarb compliance:
+
+INGREDIENT: "${ingredientName}"
+NET CARBS: ${netCarbsPer100g}g per 100g
+
+SNAP CARB DIET RULES:
+- NO grains (wheat, rice, corn, oats, barley, rye)
+- NO sugar (white sugar, brown sugar, honey, maple syrup, agave)
+- NO high-carb vegetables (potatoes, sweet potatoes, carrots, beets)
+- NO legumes (beans, lentils, chickpeas, peanuts)
+- NO most fruits (except berries in moderation)
+- NO processed foods with added sugars
+- YES meat, fish, eggs
+- YES low-carb vegetables (leafy greens, broccoli, cauliflower, zucchini)
+- YES nuts and seeds (almonds, walnuts, chia seeds)
+- YES full-fat dairy (cheese, butter, cream)
+- YES berries in moderation
+- YES healthy fats (olive oil, coconut oil, avocado)
+
+Return ONLY valid JSON:
+{
+  "isAllowed": true/false,
+  "reason": "Brief explanation why it's allowed or not",
+  "swapSuggestion": "Alternative ingredient if not allowed (or null if allowed)"
+}`;
+
   try {
-    const nutrition = await estimateCarbsFromImage(base64Image);
-    
-    // SnapCarb compliance analysis
-    const maxNetCarbsPerMeal = 15; // grams
-    const isCompliant = nutrition.total_carbs_g <= maxNetCarbsPerMeal;
-    
-    // Calculate compliance score (1-10)
-    let score = 10;
-    if (nutrition.total_carbs_g > maxNetCarbsPerMeal) {
-      score = Math.max(1, 10 - Math.floor((nutrition.total_carbs_g - maxNetCarbsPerMeal) / 2));
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        generationConfig: {
+          response_mime_type: 'application/json',
+          temperature: 0.3
+        },
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
     }
-    
-    // Generate warnings and recommendations
-    const warnings: string[] = [];
-    const recommendations: string[] = [];
-    
-    if (nutrition.total_carbs_g > maxNetCarbsPerMeal) {
-      warnings.push(`This meal exceeds the recommended ${maxNetCarbsPerMeal}g net carbs per meal`);
-      recommendations.push("Consider reducing portion sizes or choosing lower-carb alternatives");
-    }
-    
-    if (nutrition.total_carbs_g > 30) {
-      warnings.push("Very high carb content - may impact ketosis");
-      recommendations.push("This meal could break your fasting state");
-    }
-    
-    // Check for disallowed foods
-    const disallowedFoods = ['bread', 'pasta', 'rice', 'potato', 'corn', 'wheat', 'grain'];
-    const foundDisallowed = nutrition.items.filter(item => 
-      disallowedFoods.some(food => 
-        item.name.toLowerCase().includes(food) && item.confidence > 0.7
-      )
-    );
-    
-    if (foundDisallowed.length > 0) {
-      warnings.push(`Contains disallowed foods: ${foundDisallowed.map(f => f.name).join(', ')}`);
-      score = Math.max(1, score - 3);
-    }
-    
-    // Add positive recommendations
-    if (nutrition.total_carbs_g <= 10) {
-      recommendations.push("Great choice! This meal is well within your carb limits");
-    }
-    
-    if (nutrition.items.some(item => item.name.toLowerCase().includes('vegetable'))) {
-      recommendations.push("Good choice including vegetables - they're great for your health");
-    }
+
+    const data = await response.json();
+    const jsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+    const result = JSON.parse(jsonText);
     
     return {
-      nutrition,
-      compliance: {
-        score,
-        isCompliant,
-        warnings,
-        recommendations
-      }
+      isAllowed: result.isAllowed || false,
+      reason: result.reason || 'Unknown ingredient',
+      swapSuggestion: result.swapSuggestion || null
     };
   } catch (error) {
-    console.error('Error analyzing meal:', error);
-    throw new Error(`Failed to analyze meal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error checking ingredient compliance with Gemini:', error);
+    // Fallback to simple rules
+    return {
+      isAllowed: netCarbsPer100g <= 5,
+      reason: netCarbsPer100g <= 5 ? 'Low carb content' : 'High carb content'
+    };
   }
 }
-
-// Helper function to convert image to base64
-export function imageToBase64(imageUri: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // For React Native, you might need to use react-native-fs or similar
-    // This is a placeholder - implement based on your image handling library
-    reject(new Error('Image to base64 conversion not implemented - use your preferred image library'));
-  });
-}
-
-// Export the service
-export default {
-  estimateCarbsFromImage,
-  analyzeMealForSnapCarb,
-  generateSnapCarbRecipe,
-  imageToBase64
-};
-
-

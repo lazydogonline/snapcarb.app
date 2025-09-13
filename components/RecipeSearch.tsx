@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Share, Clipboard } from 'react-native';
 import { Search, BookOpen, Share2, Printer, Copy } from 'lucide-react-native';
 import { colors } from '../constants/colors';
@@ -7,14 +7,18 @@ import { SnapCarbRecipe } from '../services/recipe-service';
 import RecipeCard from './RecipeCard';
 import appDownloadLinks from '../config/app-links';
 
-export default function RecipeSearch() {
-  const [query, setQuery] = useState('');
+interface RecipeSearchProps {
+  initialQuery?: string;
+}
+
+export default function RecipeSearch({ initialQuery = '' }: RecipeSearchProps) {
+  const [query, setQuery] = useState(initialQuery);
   const [recipe, setRecipe] = useState<SnapCarbRecipe | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const handleSearch = async () => {
+  const handleSearch = async (retryCount = 0) => {
     if (!query.trim()) return;
 
     setLoading(true);
@@ -22,15 +26,32 @@ export default function RecipeSearch() {
     setRecipe(null);
 
     try {
+      console.log(`🔍 Searching for recipe: "${query.trim()}" (attempt ${retryCount + 1})`);
       const result = await RecipeService.searchRecipe({ query: query.trim() });
       setRecipe(result);
+      console.log('✅ Recipe generated successfully');
     } catch (error) {
+      console.error('❌ Recipe search error:', error);
+      
+      // If it's an API key error and we haven't retried, try once more
+      if (error instanceof Error && error.message.includes('API key') && retryCount === 0) {
+        console.log('🔄 Retrying due to API key error...');
+        setTimeout(() => handleSearch(1), 2000);
+        return;
+      }
+      
       setError(error instanceof Error ? error.message : 'Failed to generate recipe');
-      console.error('Recipe search error:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-search when component mounts with initial query
+  useEffect(() => {
+    if (initialQuery.trim()) {
+      handleSearch();
+    }
+  }, [initialQuery]);
 
   const handleSave = async () => {
     if (!recipe) return;
@@ -44,6 +65,31 @@ export default function RecipeSearch() {
       console.error('Error saving recipe:', error);
       Alert.alert('Error', 'Failed to save recipe');
       setSaving(false);
+    }
+  };
+
+  const handleSaveRecipe = async (recipeToSave: SnapCarbRecipe) => {
+    try {
+      await RecipeService.saveRecipe(recipeToSave);
+      Alert.alert('Saved!', 'Recipe saved to your collection');
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      Alert.alert('Error', 'Failed to save recipe');
+    }
+  };
+
+  const handleShareRecipe = (recipeToShare: SnapCarbRecipe) => {
+    const shareText = `${recipeToShare.title}\n\n${recipeToShare.description}\n\nIngredients:\n${recipeToShare.ingredients.map(ing => `• ${ing.amount} ${ing.name}`).join('\n')}\n\nInstructions:\n${recipeToShare.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}\n\nNutrition (per serving):\n• ${recipeToShare.nutrition.netCarbs}g Net Carbs\n• ${recipeToShare.nutrition.protein}g Protein\n• ${recipeToShare.nutrition.fat}g Fat\n• ${recipeToShare.nutrition.fiber}g Fiber`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: recipeToShare.title,
+        text: shareText,
+      });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(shareText);
+      Alert.alert('Recipe Copied!', 'Recipe has been copied to your clipboard.');
     }
   };
 
@@ -79,17 +125,68 @@ export default function RecipeSearch() {
       ingredient.name.toLowerCase().includes('seeds')
     );
 
+    // Check for bad ingredients (SnapCarb forbidden foods)
+    const badIngredients = recipe.ingredients.filter(ingredient => {
+      const name = ingredient.name.toLowerCase();
+      
+      // First check for allowed ingredients (these are OK even if they contain forbidden keywords)
+      const isAllowed = name.includes('almond flour') || name.includes('coconut flour') || 
+                       name.includes('almond') || name.includes('coconut') ||
+                       name.includes('stevia') || name.includes('erythritol') ||
+                       name.includes('cauliflower') || name.includes('zucchini') ||
+                       name.includes('shirataki') || name.includes('konjac');
+      
+      if (isAllowed) return false; // Skip allowed ingredients
+      
+      // Now check for forbidden ingredients
+      return name.includes('wheat') || name.includes('rice') || name.includes('corn') || 
+             name.includes('oats') || name.includes('barley') || name.includes('rye') ||
+             name.includes('sugar') || name.includes('honey') || name.includes('maple') ||
+             name.includes('potato') || name.includes('sweet potato') || name.includes('carrot') ||
+             name.includes('beans') || name.includes('lentils') || name.includes('chickpeas') ||
+             name.includes('bread') || name.includes('pasta') || 
+             (name.includes('flour') && !name.includes('almond') && !name.includes('coconut')) ||
+             name.includes('apple') || name.includes('banana') || name.includes('orange') ||
+             name.includes('mango') || name.includes('pineapple') || name.includes('grapes');
+    });
+
     let recommendation = '';
     let needsVeggieStarter = false;
+    let badIngredientSubstitutions = '';
 
-    // DR Davis Compliance Check
-    if (recipe.netCarbs > 15) {
-      recommendation = '⚠️ **DR Davis Alert**: This recipe exceeds 15g net carbs per serving. Consider reducing portion size or choosing a lower-carb alternative.';
+    // Check for bad ingredients first
+    if (badIngredients.length > 0) {
+      const substitutions = badIngredients.map(ingredient => {
+        const name = ingredient.name.toLowerCase();
+        if (name.includes('wheat') || name.includes('bread') || name.includes('flour')) {
+          return `${ingredient.name} → Almond flour or coconut flour`;
+        } else if (name.includes('rice')) {
+          return `${ingredient.name} → Cauliflower rice`;
+        } else if (name.includes('pasta')) {
+          return `${ingredient.name} → Zucchini noodles or shirataki noodles`;
+        } else if (name.includes('potato') || name.includes('sweet potato')) {
+          return `${ingredient.name} → Cauliflower or turnips`;
+        } else if (name.includes('sugar') || name.includes('honey') || name.includes('maple')) {
+          return `${ingredient.name} → Stevia or erythritol`;
+        } else if (name.includes('beans') || name.includes('lentils')) {
+          return `${ingredient.name} → Mushrooms or nuts`;
+        } else if (name.includes('apple') || name.includes('banana') || name.includes('orange')) {
+          return `${ingredient.name} → Berries (in moderation)`;
+        } else {
+          return `${ingredient.name} → Low-carb alternative`;
+        }
+      }).join(', ');
+      
+      badIngredientSubstitutions = `🔄 **Substitute**: ${substitutions}`;
+      recommendation = '❌ **SnapCarb Alert**: This recipe contains forbidden ingredients!';
+    } else if (recipe.netCarbs / recipe.servings > 15) {
+      const perServingCarbs = Math.round((recipe.netCarbs / recipe.servings) * 10) / 10;
+      recommendation = `⚠️ **SnapCarb Alert**: This recipe has ${perServingCarbs}g net carbs per serving (exceeds 15g limit). Consider reducing portion size or choosing a lower-carb alternative.`;
     } else {
       // Jessie Inchauspé Food Order Recommendations
       if (!hasVeggies) {
         needsVeggieStarter = true;
-        recommendation = '🥬 **Jessie Inchauspé Tip**: Add a veggie starter to reduce glucose spikes!';
+        recommendation = '🥬 **Add a veggie starter** to reduce glucose spikes!';
       } else if (hasVeggies && hasProtein && hasFats) {
         recommendation = '✅ **Optimal Eating Order**: 1) Vegetables 2) Proteins/Fats 3) Any remaining ingredients';
       } else if (hasVeggies && !hasProtein) {
@@ -99,7 +196,7 @@ export default function RecipeSearch() {
       }
     }
 
-    return { recommendation, needsVeggieStarter };
+    return { recommendation, needsVeggieStarter, badIngredientSubstitutions };
   };
 
   const getVeggieStarterSuggestions = () => {
@@ -275,7 +372,7 @@ Download: ${appDownloadLinks.web.downloadPage}`;
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Try: 'fish pie', 'sauerkraut', 'lasagne'..."
+            placeholder="Search for any dish..."
             placeholderTextColor={colors.textSecondary}
             value={query}
             onChangeText={setQuery}
@@ -296,6 +393,9 @@ Download: ${appDownloadLinks.web.downloadPage}`;
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorHelpText}>
+              💡 This might be a temporary API issue. Try again in a few minutes, or check if your Gemini API key needs renewal.
+            </Text>
           </View>
         )}
       </View>
@@ -306,15 +406,21 @@ Download: ${appDownloadLinks.web.downloadPage}`;
           <Text style={styles.recipeTitle}>{recipe.title}</Text>
           <Text style={styles.recipeDescription}>{recipe.description}</Text>
           
-          {/* DR Davis + Jessie Inchauspé Smart Recommendations */}
+          {/* SnapCarb + Jessie Inchauspé Smart Recommendations */}
           <View style={styles.recommendationsCard}>
             <Text style={styles.recommendationsTitle}>🧠 Smart Eating Recommendations</Text>
             
             {(() => {
-              const { recommendation, needsVeggieStarter } = getFoodOrderRecommendation(recipe);
+              const { recommendation, needsVeggieStarter, badIngredientSubstitutions } = getFoodOrderRecommendation(recipe);
               return (
                 <>
                   <Text style={styles.recommendationText}>{recommendation}</Text>
+                  
+                  {badIngredientSubstitutions && (
+                    <View style={styles.badIngredientContainer}>
+                      <Text style={styles.badIngredientText}>{badIngredientSubstitutions}</Text>
+                    </View>
+                  )}
                   
                   {needsVeggieStarter && (
                     <View style={styles.veggieStarterContainer}>
@@ -327,15 +433,17 @@ Download: ${appDownloadLinks.web.downloadPage}`;
                   )}
                   
                   <View style={styles.drDavisCompliance}>
-                    <Text style={styles.complianceTitle}>🎯 DR Davis Compliance:</Text>
+                    <Text style={styles.complianceTitle}>🎯 SnapCarb Compliance:</Text>
                     <Text style={[
                       styles.complianceText, 
-                      { color: recipe.netCarbs <= 15 ? colors.success : colors.error }
+                      { color: (recipe.netCarbs / recipe.servings) <= 15 ? colors.success : colors.error }
                     ]}>
-                      {recipe.netCarbs <= 15 
-                        ? `✅ ${recipe.netCarbs}g net carbs (within 15g limit)` 
-                        : `❌ ${recipe.netCarbs}g net carbs (exceeds 15g limit)`
-                      }
+                      {(() => {
+                        const perServingCarbs = Math.round((recipe.netCarbs / recipe.servings) * 10) / 10;
+                        return (recipe.netCarbs / recipe.servings) <= 15 
+                          ? `✅ ${perServingCarbs}g net carbs per serving (within 15g limit)` 
+                          : `❌ ${perServingCarbs}g net carbs per serving (exceeds 15g limit)`;
+                      })()}
                     </Text>
                     <Text style={styles.complianceSubtext}>
                       Net Carbs = Total Carbs - Fiber
@@ -347,7 +455,11 @@ Download: ${appDownloadLinks.web.downloadPage}`;
           </View>
 
           {/* Recipe Card Display */}
-          <RecipeCard recipe={recipe} />
+          <RecipeCard 
+            recipe={recipe} 
+            onSave={() => handleSaveRecipe(recipe)}
+            onShare={() => handleShareRecipe(recipe)}
+          />
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
@@ -374,22 +486,6 @@ Download: ${appDownloadLinks.web.downloadPage}`;
         </View>
       )}
 
-      {/* Tips Section */}
-      <View style={styles.tipsSection}>
-        <Text style={styles.tipsTitle}>💡 Recipe Search Tips</Text>
-        <Text style={styles.tipText}>
-          • Be specific: "grass-fed beef lasagne" instead of just "lasagne"
-        </Text>
-        <Text style={styles.tipText}>
-          • Include cooking style: "quick breakfast", "gourmet dinner"
-        </Text>
-        <Text style={styles.tipText}>
-          • Mention dietary needs: "low-carb", "high-protein", "fermented"
-        </Text>
-        <Text style={styles.tipText}>
-          • Every search creates a unique recipe - no repeats!
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -401,7 +497,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     padding: 20,
-    paddingTop: 30,
+    paddingTop: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -458,6 +554,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#991B1B',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorHelpText: {
+    fontSize: 12,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   recipeContainer: {
     padding: 20,
@@ -518,6 +621,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
+  badIngredientContainer: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  badIngredientText: {
+    fontSize: 14,
+    color: '#991B1B',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
   drDavisCompliance: {
     backgroundColor: '#F0F9EB',
     borderRadius: 12,
@@ -563,23 +680,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     marginLeft: 8,
-  },
-  tipsSection: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  tipsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 22,
-    marginBottom: 12,
   },
 });

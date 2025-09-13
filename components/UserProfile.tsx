@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../hooks/auth-context';
+import { useRouter } from 'expo-router';
 import { colors } from '../constants/colors';
-import { User, Settings, LogOut, Heart, Target, Bell, Palette } from 'lucide-react-native';
+import { User, Settings, LogOut, Heart, Target, Bell, Palette, ArrowLeft } from 'lucide-react-native';
 
 export const UserProfile: React.FC = () => {
   const { user, signOut, updatePreferences } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const router = useRouter();
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -72,6 +74,11 @@ export const UserProfile: React.FC = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             {user.avatar_url ? (
@@ -212,6 +219,17 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   profileHeader: {
     alignItems: 'center',

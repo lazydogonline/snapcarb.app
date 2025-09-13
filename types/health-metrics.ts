@@ -369,7 +369,8 @@ export type MetricCategory =
   | 'drDavisMarkers'
   | 'lifestyleMetrics' 
   | 'digestiveHealth' 
-  | 'progress';
+  | 'progress'
+  | 'programRules';
 
 export type MetricTrend = 'improving' | 'stable' | 'declining' | 'fluctuating';
 
