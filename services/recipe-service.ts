@@ -1,11 +1,14 @@
 import { estimateCarbsFromImage, generateSnapCarbRecipe } from './gemini-ai-service';
 import { FoodSearchService } from './food-search-service';
 import { USDANutritionService } from './usda-nutrition-service';
+import { ImageService } from './image-service';
+import { supabase } from '../config/supabase';
 
 export interface SnapCarbRecipe {
   id: string;
   title: string;
   description: string;
+  imageUrl?: string; // AI-generated recipe image
   difficulty: 'Easy' | 'Medium' | 'Hard';
   prepTime: number; // in minutes
   cookTime: number; // in minutes
@@ -29,7 +32,6 @@ export interface SnapCarbRecipe {
   };
   tags: string[];
   source: string;
-  imageUrl?: string;
   isFavorite?: boolean;
   createdAt?: string;
   coolFacts?: {
@@ -61,36 +63,12 @@ export class RecipeService {
         throw new Error('AI generated incomplete recipe');
       }
       
-      // Calculate REAL nutrition data from USDA database
-      try {
-        const realNutrition = await this.calculateRecipeNutrition(
-          recipe.ingredients.map(ing => ({ name: ing.name, amount: ing.amount })),
-          recipe.servings
-        );
-        
-        // Update the recipe with real nutrition data
-        recipe.nutrition = {
-          protein: realNutrition.protein_g,
-          fat: realNutrition.fat_g,
-          fiber: realNutrition.fiber_g,
-          netCarbs: realNutrition.net_carbs_g
-        };
-        
-        // Update the netCarbs field to match
-        recipe.netCarbs = realNutrition.net_carbs_g;
-        
-        // Update ingredient nutrition data
-        recipe.ingredients = recipe.ingredients.map(ing => ({
-          ...ing,
-          net_carbs_g: 0, // Will be calculated per ingredient if needed
-          fiber_g: 0
-        }));
-        
-        console.log('✅ Recipe nutrition updated with real USDA data:', realNutrition);
-      } catch (nutritionError) {
-        console.warn('⚠️ Could not calculate real nutrition, using AI estimates:', nutritionError);
-        // Keep the AI-generated nutrition if database lookup fails
-      }
+      // Images disabled for now - avoid mismatched photos
+      // TODO: Add proper image matching or AI-generated images later
+      console.log('📝 Recipe generated without image (images disabled)');
+      
+      // Skip USDA lookup for now - too slow!
+      console.log('⚡ Using AI nutrition estimates (USDA disabled for speed)');
       
       return recipe;
     } catch (error) {
@@ -107,8 +85,33 @@ export class RecipeService {
   }
 
   static async saveRecipe(recipe: SnapCarbRecipe): Promise<void> {
-    // TODO: Implement recipe saving to Supabase
-    console.log('Saving recipe:', recipe.title);
+    try {
+      console.log('💾 Saving recipe locally (Supabase not configured):', recipe.title);
+      
+      // For now, save to AsyncStorage since Supabase isn't configured
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      
+      // Get existing recipes
+      const existingRecipesJson = await AsyncStorage.getItem('saved-recipes');
+      const existingRecipes = existingRecipesJson ? JSON.parse(existingRecipesJson) : [];
+      
+      // Add new recipe (avoid duplicates)
+      const recipeExists = existingRecipes.some((r: SnapCarbRecipe) => r.id === recipe.id);
+      if (!recipeExists) {
+        existingRecipes.push({
+          ...recipe,
+          savedAt: new Date().toISOString()
+        });
+        
+        await AsyncStorage.setItem('saved-recipes', JSON.stringify(existingRecipes));
+        console.log('✅ Recipe saved successfully to local storage');
+      } else {
+        console.log('ℹ️ Recipe already saved');
+      }
+    } catch (error) {
+      console.error('❌ Error saving recipe:', error);
+      throw error;
+    }
   }
 
   static async getPopularRecipes(limit: number = 10): Promise<SnapCarbRecipe[]> {
@@ -117,9 +120,21 @@ export class RecipeService {
   }
 
   static async getUserRecipes(): Promise<SnapCarbRecipe[]> {
-    // TODO: Implement user recipe retrieval from Supabase
-    // For now, return empty array
-    return [];
+    try {
+      console.log('📚 Loading user recipes from local storage...');
+      
+      // For now, load from AsyncStorage since Supabase isn't configured
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      
+      const existingRecipesJson = await AsyncStorage.getItem('saved-recipes');
+      const recipes = existingRecipesJson ? JSON.parse(existingRecipesJson) : [];
+      
+      console.log(`✅ Loaded ${recipes.length} recipes from local storage`);
+      return recipes;
+    } catch (error) {
+      console.error('❌ Error fetching user recipes:', error);
+      return [];
+    }
   }
 
   static async deleteRecipe(recipeId: string): Promise<void> {
@@ -189,7 +204,34 @@ export class RecipeService {
           
           console.log(`✅ Got nutrition for ${displayName || ingredient.name}: ${ingredientNutrition.calories} cal, ${ingredientNutrition.protein_g}g protein`);
         } else {
-          throw new Error('No food found');
+          // Try a simpler search term if the full name doesn't work
+          const simplifiedName = ingredient.name
+            .replace(/full-fat|organic|raw|fresh|pure/gi, '')
+            .trim();
+          
+          if (simplifiedName !== ingredient.name) {
+            console.log(`🔄 Trying simplified search: "${simplifiedName}"`);
+            const simplifiedResults = await foodSearchService.searchFoods(simplifiedName);
+            if (simplifiedResults.length > 0) {
+              const food = simplifiedResults[0];
+              const grams = this.parseAmountToGrams(ingredient.amount);
+              const ingredientNutrition = {
+                name: ingredient.name,
+                amount: ingredient.amount,
+                net_carbs_g: (food.net_carbs * grams) / 100,
+                fiber_g: (food.fiber * grams) / 100,
+                calories: (food.calories * grams) / 100,
+                protein_g: (food.protein * grams) / 100,
+                fat_g: (food.fat * grams) / 100
+              };
+              nutritionData.push(ingredientNutrition);
+              console.log(`✅ Got nutrition for ${ingredient.name} (simplified): ${ingredientNutrition.calories} cal, ${ingredientNutrition.protein_g}g protein`);
+              continue;
+            }
+          }
+          
+          console.warn(`⚠️ No USDA match found for "${ingredient.name}" - using fallback values`);
+          throw new Error('No food found'); // This will trigger the fallback in catch block
         }
       } catch (error) {
         console.error(`❌ Error getting nutrition for ${ingredient.name}:`, error);
@@ -225,7 +267,7 @@ export class RecipeService {
     return {
       net_carbs_g: Math.round((totals.net_carbs_g / servings) * 100) / 100,
       fiber_g: Math.round((totals.fiber_g / servings) * 100) / 100,
-      calories: Math.round((totals.calories / servings) * 100) / 100,
+      // calories: Math.round((totals.calories / servings) * 100) / 100, // Not in nutrition interface
       protein_g: Math.round((totals.protein_g / servings) * 100) / 100,
       fat_g: Math.round((totals.fat_g / servings) * 100) / 100
     };

@@ -16,6 +16,7 @@ export const drDavisProducts: DrDavisCategory[] = [
   {
     name: 'Books',
     products: [
+      { name: "SUPER Body (NEW - Dec 2025)", amazonLink: "https://www.amazon.com/dp/0306835991?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Wheat Belly (Revised and Expanded Edition)", amazonLink: "https://www.amazon.com/dp/1984824945?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Super Gut", amazonLink: "https://www.amazon.com/dp/0316333496?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Undoctored", amazonLink: "https://www.amazon.com/dp/0451493984?tag=lazydogonline-20", isDrDavisProduct: true },
@@ -51,9 +52,11 @@ export const drDavisProducts: DrDavisCategory[] = [
       { name: "Jarrow Formulas Jarro-Dophilus", amazonLink: "https://www.amazon.com/dp/B0013OUKTS?tag=lazydogonline-20" },
       { name: "Jarrow Ideal Bowel Support", amazonLink: "https://www.amazon.com/dp/B00O4BPX9O?tag=lazydogonline-20" },
       { name: "Jarrow Fem-Dophilus Advanced", amazonLink: "https://www.amazon.com/dp/B0BP4371FK?tag=lazydogonline-20" },
+      { name: "Microbiome Labs HU58 Bacillus Subtilis", amazonLink: "https://www.amazon.com/dp/B087N2NPM9?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Oxiceutics MyReuteri Probiotic", amazonLink: "https://www.amazon.com/dp/B0BXFXZLZP?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Oxiceutics MyReuteri (Foundational Strength)", amazonLink: "https://www.amazon.com/dp/B0FBQQW4M1?tag=lazydogonline-20", isDrDavisProduct: true },
       { name: "Oxiceutics MyCrispatus™", amazonLink: "https://www.amazon.com/dp/B0FMQZMV3V?tag=lazydogonline-20", isDrDavisProduct: true },
+      { name: "Oxiceutics Gut to Glow", amazonLink: "https://www.amazon.com/s?k=oxiceutics&i=hpc&crid=1698RR6EEUBPX&sprefix=oxiceutics%2Chpc%2C298&ref=nb_sb_noss_1&tag=lazydogonline-20", isDrDavisProduct: true },
       // ADD NEW PROBIOTICS & SUPPLEMENTS HERE
     ]
   },

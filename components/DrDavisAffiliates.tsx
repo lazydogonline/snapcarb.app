@@ -6,6 +6,7 @@ interface Product {
   title: string;
   url: string;
   drDavisRecommended?: boolean;
+  isDrDavisProduct?: boolean;
 }
 
 interface ProductCategory {
@@ -32,11 +33,12 @@ const DrDavisAffiliates: React.FC = () => {
     {
       name: 'Books',
       products: [
-        { title: "Wheat Belly (Revised and Expanded Edition)", url: "https://www.amazon.com/Wheat-Belly-Revised-Expanded-Lose/dp/1984824945", drDavisRecommended: true },
-        { title: "Super Gut", url: "https://www.amazon.com/Super-Gut-Four-Week-Transform-Health/dp/0316333492", drDavisRecommended: true },
-        { title: "Undoctored", url: "https://www.amazon.com/Undoctored-Health-Failed-Become-Smarter/dp/1623368669/ref=sr_1_1?dib=eyJ2IjoiMSJ9.Q16wp5ZTj67HEii1V3wGnbjLCsw1QiyRMs3HAHr2U8Tiw2iKjoB7wwKhb0ifkUfSa2-Q7Vf1rZ2I1Tu3dJaFB0lyzE0UB3p6u5ORHCxrTWIC3_H323uFfVp7WBj6ujzThVkTYKgmSnI69hpLEixCFrlcUBFMnwPgUGRbmKNVI9LNEKdVgKhdIHRyjGTJ9Uf__dRCQdUouc2aXysp_kqWjzfREWqvrX0906OzNuwzd1U.5HwFPTvk3qwOEopHMtIy2llHQLjhC1Zh1zZ7w2PJvzQ&dib_tag=se&keywords=undoctored&qid=1757789915&sr=8-1&tag=lazydogonline-20", drDavisRecommended: true },
-        { title: "Wheat Belly 10-Day Grain Detox", url: "https://www.amazon.com/Wheat-Belly-10-Day-Grain-Detox/dp/1623366364", drDavisRecommended: true },
-        { title: "Wheat Belly Total Health", url: "https://www.amazon.com/Wheat-Belly-Total-Health-Ultimate/dp/1623364086", drDavisRecommended: true }
+        { title: "SUPER Body (NEW - Dec 2025)", url: "https://www.amazon.com/SUPER-Body-Composition-Youthful-Contours/dp/0306835991/ref=sr_1_1?crid=2OPSB63XWZIU2&dib=eyJ2IjoiMSJ9.GO9c3zLduydg0vIQEA13Sc43GLEND3G7dz_rxqM-e0cdlXwBomlmvn-BTvpXL0rkhCbI6Nfsm7jhSzNMNOZXrGgDdDl7i-8Ve2S4anCG7-wOWzvhL1-2bxKvMdyuxl9rV7aSW26RR0HFwJ-yQ0WHuqzZvNovpI4TLGHstny1nxqo7vRM9Wl7mM7g49EAKU1esDKHx4Fw52p4qUKWEHkdCokJEoToEQGXDmtG9GP4VGA.1K9U2pfq7Gp45ZHPQCUUUCr91SjykyGKA50EOGa7Pb0&dib_tag=se&keywords=super+body+william+davis&qid=1757863150&sprefix=super+body%2Caps%2C421&sr=8-1", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Wheat Belly (Revised and Expanded Edition)", url: "https://www.amazon.com/Wheat-Belly-Revised-Expanded-Lose/dp/1984824945", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Super Gut", url: "https://www.amazon.com/Super-Gut-Four-Week-Transform-Health/dp/0316333492", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Undoctored", url: "https://www.amazon.com/Undoctored-Health-Failed-Become-Smarter/dp/1623368669/ref=sr_1_1?dib=eyJ2IjoiMSJ9.Q16wp5ZTj67HEii1V3wGnbjLCsw1QiyRMs3HAHr2U8Tiw2iKjoB7wwKhb0ifkUfSa2-Q7Vf1rZ2I1Tu3dJaFB0lyzE0UB3p6u5ORHCxrTWIC3_H323uFfVp7WBj6ujzThVkTYKgmSnI69hpLEixCFrlcUBFMnwPgUGRbmKNVI9LNEKdVgKhdIHRyjGTJ9Uf__dRCQdUouc2aXysp_kqWjzfREWqvrX0906OzNuwzd1U.5HwFPTvk3qwOEopHMtIy2llHQLjhC1Zh1zZ7w2PJvzQ&dib_tag=se&keywords=undoctored&qid=1757789915&sr=8-1&tag=lazydogonline-20", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Wheat Belly 10-Day Grain Detox", url: "https://www.amazon.com/Wheat-Belly-10-Day-Grain-Detox/dp/1623366364", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Wheat Belly Total Health", url: "https://www.amazon.com/Wheat-Belly-Total-Health-Ultimate/dp/1623364086", drDavisRecommended: true, isDrDavisProduct: true }
       ],
       icon: <BookOpen size={24} color="#FFFFFF" />,
       color: '#8B5CF6'
@@ -69,8 +71,11 @@ const DrDavisAffiliates: React.FC = () => {
         { title: "Jarrow Formulas Jarro-Dophilus", url: "https://www.amazon.com/Jarrow-Formulas-Jarro-Dophilus-Probiotic-Capsules/dp/B0013OUKTS" },
         { title: "Jarrow Ideal Bowel Support", url: "https://www.amazon.com/Jarrow-Formulas-Ideal-Bowel-Support/dp/B00O4BPX9O" },
         { title: "Jarrow Fem-Dophilus Advanced", url: "https://www.amazon.com/Jarrow-Formulas-Fem-Dophilus-Advanced-Capsules/dp/B0BP4371FK" },
-        { title: "Oxiceutics MyReuteri Probiotic", url: "https://www.amazon.com/Oxiceutics-MyReuteri-Probiotic-Lactobacillus-Supplement/dp/B0BXFXZLZP", drDavisRecommended: true },
-        { title: "Oxiceutics MyReuteri (Foundational Strength)", url: "https://www.amazon.com/Oxiceutics-MyReuteri-Foundational-Strength-Lactobacillus/dp/B0FBQQW4M1", drDavisRecommended: true }
+        { title: "Microbiome Labs HU58 Bacillus Subtilis", url: "https://www.amazon.com/Microbiome-Labs-HU58-Survivability-Shelf-Stable/dp/B087N2NPM9/ref=sr_1_1_sspa?crid=152VG0T13QPYR&dib=eyJ2IjoiMSJ9.n1rZNkVVGGJuw3529-DScAkpO4BU03GCxP-49J3crjRCh7hDQ-ArGsftb7Qc7_mX-lgNjKPTGzG1FbumKbZE_voGaIoUYuAoe6LNTn3jFwpyoDHyW6NGxukh7PWfXs4zSW--8E8QJc0rMrOvFEYz6-ph40mzLw1RZMavuQxFDVRnylBRRooYAdll4g0SDdMdGjC94iY9I6aly1Cz4F0ojZlTztHdikv2T1x6HIvtNyAPT9Jp9SlfakB37Cq2YmR9JOUA1rdGHv0p99JBya6M0qgwxofa0-gy2tJmCPj_MiI.6rJFE1090xKju3eWwalljNRDjVVZD2MKyn9EZESfg8s&dib_tag=se&keywords=hu58+bacillus+subtilis&qid=1757864866&sprefix=hu58%2Caps%2C408&sr=8-1-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&psc=1", drDavisRecommended: true },
+        { title: "Oxiceutics MyReuteri Probiotic", url: "https://www.amazon.com/Oxiceutics-MyReuteri-Probiotic-Lactobacillus-Supplement/dp/B0BXFXZLZP", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Oxiceutics MyReuteri (Foundational Strength)", url: "https://www.amazon.com/Oxiceutics-MyReuteri-Foundational-Strength-Lactobacillus/dp/B0FBQQW4M1", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Oxiceutics MyCrispatus™ Probiotic", url: "https://www.amazon.com/MyCrispatusTM-Probiotic-crispatus-Hyaluronic-Fermented/dp/B0FMQZMV3V/ref=sr_1_8?crid=1698RR6EEUBPX&dib=eyJ2IjoiMSJ9.QnjJJ_V3MXl_oVf_s0Yaxf-QGBBZIIqPRfC1jrbsEl7wURhQNueyopVrUWGAwjjnztevWRzH8oDnoCFttAwZsIkasOO8SUmlMb9a1KujT9Uym2i-BiM_mf5DW4XVwhRlO8eKr7twXBBb02D4KWxlZQSv_78hlKdedMtjTCIq1AW3ShF6t15H0dwhqBOGY85QwFR6GxIy_xHmFg_oM60EqGMO_27lOBUlezqMjY2oQoZXqMZYnmroOdevZeOQ_BbTxOxcjNYvcoNellmW0OddcITAAYSezQfGFIoCr2B6Xqs.2hq-AHVxrGBIB5ear4rOxsf4WzLFVSFWyN-dppM-K3c&dib_tag=se&keywords=oxiceutics&qid=1757852548&s=hpc&sprefix=oxiceutics%2Chpc%2C298&sr=1-8", drDavisRecommended: true, isDrDavisProduct: true },
+        { title: "Oxiceutics Gut to Glow", url: "https://www.amazon.com/s?k=oxiceutics&i=hpc&crid=1698RR6EEUBPX&sprefix=oxiceutics%2Chpc%2C298&ref=nb_sb_noss_1", drDavisRecommended: true, isDrDavisProduct: true }
       ],
       icon: <Pill size={24} color="#FFFFFF" />,
       color: '#EF4444'
@@ -141,7 +146,9 @@ const DrDavisAffiliates: React.FC = () => {
                       {product.drDavisRecommended && (
                         <View style={styles.drDavisRecommendation}>
                           <Star size={16} color="#F59E0B" fill="#F59E0B" />
-                          <Text style={styles.drDavisText}>Dr. Davis</Text>
+                          <Text style={styles.drDavisText}>
+                            {product.isDrDavisProduct ? 'Dr. Davis' : 'Recommended'}
+                          </Text>
                         </View>
                       )}
                     </View>

@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase';
 import { config } from '../config/environment';
 import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 
 export interface UserProfile {
@@ -36,6 +37,7 @@ class AuthService {
 
   constructor() {
     this.initializeAuth();
+    this.setupAuthListener();
   }
 
   // Initialize authentication state
@@ -60,11 +62,43 @@ class AuthService {
     }
   }
 
+  // Set up auth state listener
+  private setupAuthListener() {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state change:', event, session?.user?.email);
+      console.log('🔐 Current auth state before update:', this.authState);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in, updating state...');
+        // Update loading state immediately
+        this.updateState({ ...this.authState, loading: false, session });
+        await this.setUserProfile(session.user);
+        await this.sendWelcomeEmail(session.user);
+        console.log('✅ Auth state updated after sign in:', this.authState);
+      } else if (event === 'SIGNED_OUT') {
+        console.log('🚪 User signed out');
+        this.updateState({
+          user: null,
+          session: null,
+          loading: false,
+          error: null,
+        });
+      } else {
+        console.log('🔄 Other auth event, ensuring loading is false');
+        // For other events, make sure loading is false
+        this.updateState({ ...this.authState, loading: false });
+      }
+    });
+  }
+
   // Google OAuth configuration
   private getGoogleAuthConfig() {
-    const redirectUri = AuthSession.makeRedirectUri({
-      scheme: 'snapcarb',
-      path: 'auth/callback',
+    // Use a consistent redirect URI that doesn't depend on port
+    const redirectUri = 'snapcarb://auth/callback';
+
+    console.log('🔐 Google OAuth Config:', {
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+      redirectUri,
     });
 
     return {
@@ -74,62 +108,38 @@ class AuthService {
     };
   }
 
-  // Sign in with Google
+  // Sign in with Google using Supabase OAuth (web-based)
   async signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
     try {
       this.updateState({ ...this.authState, loading: true, error: null });
 
-      const googleConfig = this.getGoogleAuthConfig();
-      
-      if (!googleConfig.clientId) {
-        throw new Error('Google OAuth client ID not configured');
-      }
+      console.log('🔐 Starting Google OAuth with Supabase...');
 
-      // Create OAuth request
-      const request = new AuthSession.AuthRequest({
-        clientId: googleConfig.clientId,
-        scopes: googleConfig.scopes,
-        redirectUri: googleConfig.redirectUri,
-        responseType: AuthSession.ResponseType.Code,
-        extraParams: {
-          access_type: 'offline',
+      // Use Supabase's web OAuth - this will open in browser and redirect back
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window?.location?.origin || 'exp://localhost:8082',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
-      // Get authorization URL
-      const authUrl = await request.makeAuthUrlAsync();
-      
-      // Open browser for OAuth
-      const result = await AuthSession.startAsync({
-        authUrl,
-        returnUrl: googleConfig.redirectUri,
-      });
-
-      if (result.type === 'success' && result.params.code) {
-        // Exchange code for tokens
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            queryParams: {
-              code: result.params.code,
-            },
-          },
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data.user) {
-          await this.setUserProfile(data.user);
-          await this.sendWelcomeEmail(data.user);
-          return { success: true };
-        }
+      if (error) {
+        console.error('🔐 OAuth error:', error);
+        throw error;
       }
 
-      throw new Error('Google authentication was cancelled or failed');
+      console.log('🔐 OAuth initiated successfully');
+      
+      // Don't set loading to false here - let the auth state listener handle it
+      // when the user returns from OAuth
+      return { success: true };
     } catch (error: any) {
       const errorMessage = error.message || 'Google sign-in failed';
+      console.error('🔐 Google sign-in failed:', errorMessage);
       this.updateState({ ...this.authState, loading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
@@ -263,7 +273,7 @@ class AuthService {
                   <li><strong>Build Healthy Recipes</strong> - Create delicious, SnapCarb-compliant meals</li>
                   <li><strong>Join Challenges</strong> - Take on our 10-day detox challenges</li>
                   <li><strong>Monitor Health Markers</strong> - Track your progress toward optimal health</li>
-                  <li><strong>Shop Smart</strong> - Access Dr. Davis approved products and supplements</li>
+                  <li><strong>Shop Smart</strong> - Access quality products and supplements</li>
                 </ul>
                 
                 <h3>🎯 Your Health Journey Starts Here</h3>
@@ -324,7 +334,11 @@ class AuthService {
           ...this.authState,
           user: {
             ...this.authState.user,
-            preferences: { ...this.authState.user.preferences, ...preferences },
+            preferences: { 
+              notifications_enabled: preferences?.notifications_enabled ?? this.authState.user.preferences?.notifications_enabled ?? false,
+              theme: preferences?.theme ?? this.authState.user.preferences?.theme ?? 'auto',
+              health_goals: preferences?.health_goals ?? this.authState.user.preferences?.health_goals
+            },
           },
         });
       }
@@ -373,5 +387,4 @@ class AuthService {
 // Create singleton instance
 export const authService = new AuthService();
 
-// Export types
-export type { UserProfile, AuthState };
+// Types are already exported above

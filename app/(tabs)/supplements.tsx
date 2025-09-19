@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Pill, CheckCircle, Circle, RotateCcw } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHealth } from '@/hooks/health-store';
 
 export default function SupplementsScreen() {
   const { supplements, toggleSupplement, resetDailySupplements } = useHealth();
+  const insets = useSafeAreaInsets();
   
   const takenCount = supplements.filter(s => s.taken).length;
   const completionPercentage = (takenCount / supplements.length) * 100;
@@ -27,7 +29,11 @@ export default function SupplementsScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.progressSection}>
           <View style={styles.progressBar}>
             <View 

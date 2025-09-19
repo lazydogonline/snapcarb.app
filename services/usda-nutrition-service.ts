@@ -28,15 +28,29 @@ export class USDANutritionService {
     try {
       console.log(`USDA Service: Searching for "${query}" in local database`);
       
-      // Use the database function for efficient search
-      const { data, error } = await supabase.rpc('search_usda_foods', {
+      // First try foundation foods (real whole foods)
+      console.log(`🔍 Searching foundation foods first for: "${query}"`);
+      let { data, error } = await supabase.rpc('search_usda_foods', {
         search_query: query,
-        food_type: 'both',
+        food_type: 'foundation',
         limit_count: limit
       });
       
+      // If no foundation foods found, try branded foods as fallback
+      if (!error && (!data || data.length === 0)) {
+        console.log(`🔄 No foundation foods found, trying branded foods for: "${query}"`);
+        const brandedResult = await supabase.rpc('search_usda_foods', {
+          search_query: query,
+          food_type: 'branded',
+          limit_count: limit
+        });
+        data = brandedResult.data;
+        error = brandedResult.error;
+      }
+      
       if (error) {
-        console.error('Error searching USDA foods:', error);
+        console.warn('USDA database not available (functions/data missing):', error.message);
+        console.log('Falling back to AI estimates for nutrition data');
         return [];
       }
       
@@ -45,8 +59,28 @@ export class USDANutritionService {
         return [];
       }
       
+      // Filter out obvious junk/processed foods
+      const filteredData = data.filter((item: any) => {
+        const desc = item.description.toLowerCase();
+        
+        // Skip items that are clearly processed/composite foods
+        const badKeywords = [
+          'puffs', 'chips', 'crackers', 'cereal', 'bars', 'snack', 'meal',
+          'frozen', 'prepared', 'seasoning mix', 'blend', 'mix', 'sauce',
+          'dressing', 'marinade', 'coating', 'batter'
+        ];
+        
+        const hasBadKeywords = badKeywords.some(keyword => desc.includes(keyword));
+        if (hasBadKeywords) {
+          console.log(`🚫 Filtered out processed food: "${item.description}"`);
+          return false;
+        }
+        
+        return true;
+      });
+      
       // Convert to our interface format
-      const results: USDAFoodSearchResult[] = data.map((item: any) => ({
+      const results: USDAFoodSearchResult[] = filteredData.map((item: any) => ({
         fdcId: item.fdc_id,
         description: item.description,
         brandOwner: item.brand_owner,
@@ -75,7 +109,7 @@ export class USDANutritionService {
       });
       
       if (error) {
-        console.error('Error getting USDA nutrition:', error);
+        console.warn('USDA nutrition lookup failed (functions/data missing):', error.message);
         return null;
       }
       

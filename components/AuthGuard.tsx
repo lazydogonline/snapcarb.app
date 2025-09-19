@@ -15,23 +15,27 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   requireAuth = true, 
   redirectTo = '/login' 
 }) => {
-  // TEMPORARY: Bypass authentication to allow access to app
-  return <>{children}</>;
-  
-  // Original code commented out for now
-  /*
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    console.log('🛡️ AuthGuard state:', { user: !!user, loading, requireAuth, redirectTo });
+    
     if (!loading) {
-      if (requireAuth && !user) {
-        // User is not authenticated and auth is required
-        router.replace(redirectTo);
-      } else if (!requireAuth && user) {
-        // User is authenticated but auth is not required (e.g., login page)
-        router.replace('/');
-      }
+      // Add a small delay to ensure router is ready
+      setTimeout(() => {
+        if (requireAuth && !user) {
+          // User is not authenticated and auth is required
+          console.log('🛡️ Redirecting to login - auth required but no user');
+          router.replace(redirectTo as any);
+        } else if (!requireAuth && user) {
+          // User is authenticated but auth is not required (e.g., login page)
+          console.log('🛡️ Redirecting to home - user authenticated on login page');
+          router.replace('/');
+        } else {
+          console.log('🛡️ No redirect needed');
+        }
+      }, 100);
     }
   }, [user, loading, requireAuth, redirectTo, router]);
 
@@ -56,7 +60,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
 
   // Render children when authentication state matches requirements
   return <>{children}</>;
-  */
 };
 
 const styles = StyleSheet.create({

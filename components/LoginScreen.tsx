@@ -43,7 +43,7 @@ export const LoginScreen: React.FC = () => {
     },
     {
       icon: <Shield size={24} color={colors.primary} />,
-      title: 'Dr. Davis Approved',
+      title: 'Quality Products',
       description: 'Access to proven health strategies and products',
     },
     {
@@ -100,7 +100,7 @@ export const LoginScreen: React.FC = () => {
             disabled={isSigningIn || loading}
           >
             {isSigningIn ? (
-              <ActivityIndicator color={colors.white} size="small" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <>
                 <Image
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#ffffff',
     marginBottom: 10,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 18,
-    color: colors.white,
+    color: '#ffffff',
     textAlign: 'center',
     opacity: 0.9,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     paddingTop: 30,
   },
   missionStatement: {
-    backgroundColor: colors.white,
+    backgroundColor: '#ffffff',
     padding: 20,
     borderRadius: 15,
     marginBottom: 25,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: '#ffffff',
     padding: 15,
     borderRadius: 12,
     marginBottom: 12,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: colors.lightBackground,
+    backgroundColor: colors.successBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: '#ffffff',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,

@@ -28,7 +28,6 @@ function ProfileButton() {
 
 export default function TabLayout() {
   return (
-    <AuthGuard requireAuth={true} redirectTo="/login">
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#22c55e",
@@ -114,7 +113,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    </AuthGuard>
   );
 }
 

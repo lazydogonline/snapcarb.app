@@ -36,9 +36,22 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
       ]);
 
       if (storedMeals) setMeals(JSON.parse(storedMeals));
-      if (storedSupplements) setSupplements(JSON.parse(storedSupplements));
+      if (storedSupplements) {
+        const stored = JSON.parse(storedSupplements);
+        // Ensure we have all 8 supplements - merge with defaults if needed
+        if (stored.length < defaultSupplements.length) {
+          const mergedSupplements = defaultSupplements.map(defaultSup => {
+            const storedSup = stored.find((s: Supplement) => s.id === defaultSup.id);
+            return storedSup || defaultSup;
+          });
+          setSupplements(mergedSupplements);
+          await AsyncStorage.setItem('supplements', JSON.stringify(mergedSupplements));
+        } else {
+          setSupplements(stored);
+        }
+      }
       if (storedChallenge) {
-        console.log('Loading fresh challenge data:', JSON.parse(storedChallenge).map(d => ({ day: d.day, completed: d.completed })));
+        console.log('Loading fresh challenge data:', JSON.parse(storedChallenge).map((d: ChallengeDay) => ({ day: d.day, completed: d.completed })));
         setChallenge(JSON.parse(storedChallenge));
       }
       if (storedHealthMetrics) {
@@ -110,6 +123,8 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
       supplementsTaken: todaySupplements.length,
       totalSupplements: supplements.length,
       challengeCompleted: todayChallenge?.completed || false,
+      fastingHours: 0, // TODO: Calculate actual fasting hours
+      adherenceScore: todayChallenge?.adherenceScore || 0,
     };
   }, [meals, supplements, challenge]);
 
@@ -124,9 +139,13 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
   }, [supplements]);
 
   const updateHealthMetrics = useCallback(async (updates: Partial<typeof healthMetrics>) => {
+    console.log('🔄 Updating health metrics:', updates);
+    console.log('🔄 Current metrics before update:', healthMetrics);
     const updatedMetrics = { ...healthMetrics, ...updates };
+    console.log('🔄 New metrics after update:', updatedMetrics);
     setHealthMetrics(updatedMetrics);
     await AsyncStorage.setItem('health-metrics', JSON.stringify(updatedMetrics));
+    console.log('✅ Health metrics saved to AsyncStorage');
   }, [healthMetrics]);
 
   return useMemo(() => ({

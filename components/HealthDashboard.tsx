@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Modal, TextInput, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { 
   Activity, 
   Heart, 
@@ -33,6 +35,7 @@ interface HealthDashboardProps {
 
 export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const { healthMetrics, updateHealthMetrics } = useHealth();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<MetricCategory>('bodyMeasurements');
   const [metrics, setMetrics] = useState<Partial<HealthMetrics>>({});
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
@@ -45,10 +48,10 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   
   // Input values for different metrics
   const [waistValue, setWaistValue] = useState('');
-  const [glucoseValue, setGlucoseValue] = useState('');
   const [preMealGlucose, setPreMealGlucose] = useState('');
   const [postMealGlucose, setPostMealGlucose] = useState('');
-  const [glucoseTestType, setGlucoseTestType] = useState<'single' | 'no-change'>('no-change');
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [noWheat, setNoWheat] = useState(true);
   const [noSugar, setNoSugar] = useState(true);
   const [noGrains, setNoGrains] = useState(true);
@@ -58,11 +61,11 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     loadHealthData();
   }, [userId]);
 
-  // Calculate fasting end time (8 hours eating window)
+  // Calculate suggested end time (8 hours after start) but allow manual override
   useEffect(() => {
-    const endTime = new Date(fastingStartTime);
-    endTime.setHours(endTime.getHours() + 8);
-    setFastingEndTime(endTime);
+    const suggestedEndTime = new Date(fastingStartTime);
+    suggestedEndTime.setHours(suggestedEndTime.getHours() + 8);
+    setFastingEndTime(suggestedEndTime);
   }, [fastingStartTime]);
 
   const handleMetricClick = (metricType: string) => {
@@ -71,7 +74,6 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     
     // Reset input values when opening modal
     setWaistValue('');
-    setGlucoseValue('');
     setPreMealGlucose('');
     setPostMealGlucose('');
     setNoWheat(true);
@@ -96,10 +98,9 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
           }
           break;
         case 'Glucose':
-          if (glucoseTestType === 'no-change') {
-            if (preMealGlucose && postMealGlucose) {
+          if (preMealGlucose && postMealGlucose) {
               const change = Math.abs(parseFloat(postMealGlucose) - parseFloat(preMealGlucose));
-              const isGood = change <= 30;
+              const isGood = change <= 15; // No change rule: glucose should stay within 15 points
               
               await updateHealthMetrics({
                 glucoseLevel: parseFloat(postMealGlucose)
@@ -109,15 +110,9 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                 isGood ? 'Excellent! ✅' : 'High Change ⚠️', 
                 `Pre: ${preMealGlucose}mg/dL → Post: ${postMealGlucose}mg/dL\nChange: ${change.toFixed(1)}mg/dL\n\n${isGood ? 'Following the No Change Rule!' : 'Consider adjusting your meal choices.'}`
               );
+            } else {
+              Alert.alert('Missing Data', 'Please enter both pre-meal and post-meal glucose readings.');
             }
-          } else {
-            if (glucoseValue) {
-              await updateHealthMetrics({
-                glucoseLevel: parseFloat(glucoseValue)
-              });
-              Alert.alert('Success', `Glucose level saved: ${glucoseValue}mg/dL`);
-            }
-          }
           break;
         case 'Fasting':
           const duration = Math.round((fastingEndTime.getTime() - fastingStartTime.getTime()) / (1000 * 60 * 60));
@@ -307,7 +302,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   const renderBodyMeasurements = () => (
     <View style={styles.tabContent}>
       <View style={styles.metricsGrid}>
-        {renderMetricCard('Waist', useMetric ? '82' : '32.3', useMetric ? 'cm' : 'in', getMetricTrend('waist'), <Scale size={20} color={colors.primary} />)}
+        {renderMetricCard('Waist', useMetric ? `${healthMetrics.waistMeasurement || 82}` : `${((healthMetrics.waistMeasurement || 82) / 2.54).toFixed(1)}`, useMetric ? 'cm' : 'in', getMetricTrend('waist'), <Scale size={20} color={colors.primary} />)}
         {renderMetricCard('Glucose', '85', 'mg/dL', getMetricTrend('glucose'), <Droplets size={20} color={colors.primary} />)}
       </View>
       
@@ -444,8 +439,18 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
             <AlertCircle size={20} color={sugarCompliant ? colors.primary : '#ef4444'} />)}
           {renderMetricCard('No Grains', grainsCompliant ? '✓' : '✗', 'today', grainsCompliant ? 'improving' : 'declining', 
             <AlertCircle size={20} color={grainsCompliant ? colors.primary : '#ef4444'} />)}
-          {renderMetricCard('Compliance', compliancePercent.toString(), '%', compliancePercent >= 67 ? 'improving' : 'declining', 
-            <Target size={20} color={compliancePercent >= 67 ? colors.primary : '#ef4444'} />)}
+        </View>
+        
+        {/* Compliance Score Display (Non-clickable) */}
+        <View style={styles.complianceScoreCard}>
+          <View style={styles.complianceHeader}>
+            <Target size={24} color={compliancePercent >= 67 ? colors.primary : '#ef4444'} />
+            <Text style={styles.complianceTitle}>SnapCarb Compliance</Text>
+          </View>
+          <Text style={styles.complianceScore}>{compliancePercent}%</Text>
+          <Text style={styles.complianceSubtitle}>
+            {complianceCount}/3 rules followed today
+          </Text>
         </View>
       </View>
     );
@@ -478,17 +483,11 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.header}>
-        <View style={styles.headerTop}>
-        <Text style={styles.headerTitle}>Health Dashboard</Text>
-          <TouchableOpacity style={styles.shareButton}>
-            <Share2 size={24} color={colors.background} />
-          </TouchableOpacity>
-                </View>
-        <Text style={styles.headerSubtitle}>Track your SnapCarb health journey</Text>
-            </LinearGradient>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={{ paddingBottom: 400 }}
+      showsVerticalScrollIndicator={false}
+    >
 
       {/* Quick Stats */}
       <View style={styles.quickStats}>
@@ -499,7 +498,7 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
         </View>
         <View style={styles.statCard}>
           <TrendingUp size={24} color={colors.primary} />
-          <Text style={styles.statValue}>-3cm</Text>
+          <Text style={styles.statValue}>{(82 - (healthMetrics.waistMeasurement || 82)) > 0 ? `-${(82 - (healthMetrics.waistMeasurement || 82))}cm` : '0cm'}</Text>
           <Text style={styles.statLabel}>Waist Reduction</Text>
         </View>
       </View>
@@ -574,23 +573,10 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                   Blood sugar 30-60 minutes after meal start should be approximately the same as before the meal
                 </Text>
                 
-                <View style={styles.unitToggle}>
-                  <TouchableOpacity 
-                    style={[styles.unitButton, glucoseTestType === 'no-change' && styles.unitButtonActive]}
-                    onPress={() => setGlucoseTestType('no-change')}
-                  >
-                    <Text style={[styles.unitButtonText, glucoseTestType === 'no-change' && styles.unitButtonTextActive]}>No Change Test</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.unitButton, glucoseTestType === 'single' && styles.unitButtonActive]}
-                    onPress={() => setGlucoseTestType('single')}
-                  >
-                    <Text style={[styles.unitButtonText, glucoseTestType === 'single' && styles.unitButtonTextActive]}>Single Reading</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={styles.inputLabel}>SnapCarb No Change Test</Text>
+                <Text style={styles.helperText}>Test if your meal follows the no-change rule</Text>
 
-                {glucoseTestType === 'no-change' ? (
-                  <View>
+                <View>
                     <Text style={styles.inputLabel}>Pre-Meal Glucose (mg/dL):</Text>
                     <TextInput
                       style={styles.textInput}
@@ -637,35 +623,62 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                       </View>
                     )}
                   </View>
-                ) : (
-                  <View>
-                    <Text style={styles.inputLabel}>Glucose Level (mg/dL):</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={glucoseValue}
-                      onChangeText={setGlucoseValue}
-                      placeholder="Enter glucose level"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                )}
+                
               </View>
             )}
             
             {selectedMetricType === 'Fasting' && (
               <View>
                 <Text style={styles.inputLabel}>Fasting Start Time:</Text>
-                <TouchableOpacity style={styles.timeButton}>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => setShowStartTimePicker(true)}
+                >
                   <Text style={styles.timeButtonText}>{fastingStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
                 </TouchableOpacity>
                 
-                <Text style={styles.inputLabel}>Eating Window Ends:</Text>
+                <Text style={styles.inputLabel}>Fasting End Time:</Text>
+                <Text style={styles.helperText}>Suggested: 8 hours after start (tap to adjust)</Text>
+                <TouchableOpacity 
+                  style={[styles.timeButton, styles.calculatedTimeButton]}
+                  onPress={() => setShowEndTimePicker(true)}
+                >
+                  <Text style={[styles.timeButtonText, styles.paleTimeText]}>{fastingEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                </TouchableOpacity>
+                
                 <View style={styles.calculatedTime}>
                   <Text style={styles.calculatedTimeText}>
-                    {fastingEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    Duration: {Math.round((fastingEndTime.getTime() - fastingStartTime.getTime()) / (1000 * 60 * 60))} hours
                   </Text>
-                  <Text style={styles.calculatedLabel}>(8 hours later)</Text>
                 </View>
+
+                {showStartTimePicker && (
+                  <DateTimePicker
+                    value={fastingStartTime}
+                    mode="time"
+                    is24Hour={false}
+                    onChange={(event, selectedTime) => {
+                      setShowStartTimePicker(Platform.OS === 'ios');
+                      if (selectedTime) {
+                        setFastingStartTime(selectedTime);
+                      }
+                    }}
+                  />
+                )}
+
+                {showEndTimePicker && (
+                  <DateTimePicker
+                    value={fastingEndTime}
+                    mode="time"
+                    is24Hour={false}
+                    onChange={(event, selectedTime) => {
+                      setShowEndTimePicker(Platform.OS === 'ios');
+                      if (selectedTime) {
+                        setFastingEndTime(selectedTime);
+                      }
+                    }}
+                  />
+                )}
               </View>
             )}
 
@@ -1300,6 +1313,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.background,
+  },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  calculatedTimeButton: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
+    opacity: 0.8,
+  },
+  paleTimeText: {
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+  },
+  complianceScoreCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  complianceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  complianceTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginLeft: 8,
+  },
+  complianceScore: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  complianceSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
 });
 

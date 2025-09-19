@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Linking } from 'react-native';
 import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart, Play, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { healthEvents } from '@/constants/health-data';
-import SociabilityTracker from '@/components/SociabilityTracker';
 
 export default function EventsScreen() {
   const [activeTab, setActiveTab] = useState<'videos' | 'events'>('videos');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const insets = useSafeAreaInsets();
   
   const upcomingEvents = healthEvents.filter(event => event.date > new Date());
   const pastEvents = healthEvents.filter(event => event.date <= new Date());
@@ -104,7 +105,11 @@ export default function EventsScreen() {
 
       {/* Content based on active tab */}
       {activeTab === 'videos' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.videoLibraryHeader}>
             <Text style={styles.sectionTitle}>Dr. Davis Video Library</Text>
             <Text style={styles.sectionDescription}>
@@ -113,11 +118,14 @@ export default function EventsScreen() {
           </View>
 
           {['DIETARY FIBER', 'STATINS', 'HEART', 'MICROBES', 'GRAINS'].map((category) => {
-            const categoryVideos = pastEvents.filter(event => event.videoUrl && event.category === category);
+            // Use actual Dr. Davis video data from health-data.ts
+            const categoryVideos = healthEvents.filter(event => 
+              (event as any).category === category && (event as any).videoUrl
+            );
             if (categoryVideos.length === 0) return null;
             
             const isExpanded = expandedCategories.includes(category);
-            const categoryColors = {
+            const categoryColors: { [key: string]: string } = {
               'DIETARY FIBER': '#8B5CF6',
               'STATINS': '#10B981', 
               'HEART': '#EF4444',
@@ -147,7 +155,7 @@ export default function EventsScreen() {
                       <TouchableOpacity
                         key={video.id}
                         style={styles.videoCard}
-                        onPress={() => handleVideoPress(video.videoUrl!)}
+                        onPress={() => handleVideoPress((video as any).videoUrl || '#')}
                       >
                         <View style={styles.videoInfo}>
                           <Text style={styles.videoTitle}>{video.title}</Text>
@@ -165,7 +173,11 @@ export default function EventsScreen() {
       )}
 
       {activeTab === 'events' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Join Inner Circle */}
           <TouchableOpacity 
             style={styles.innerCircleCard}
@@ -274,9 +286,6 @@ export default function EventsScreen() {
       </ScrollView>
       )}
 
-      {activeTab === 'sociability' && (
-        <SociabilityTracker />
-      )}
     </SafeAreaView>
   );
 }
@@ -482,6 +491,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  videoLibraryHeader: {
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  categoryContainer: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  categoryHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginLeft: 12,
+  },
+  videosContainer: {
+    backgroundColor: '#ffffff',
+  },
+  videoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  videoInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  videoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  videoDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+  innerCircleCard: {
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  innerCircleGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  innerCircleTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  innerCircleDescription: {
+    fontSize: 14,
+    color: '#ffffff',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+    opacity: 0.9,
   },
 
 });

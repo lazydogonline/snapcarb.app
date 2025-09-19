@@ -48,6 +48,9 @@ export interface HealthEvent {
   type: 'webinar' | 'workshop' | 'consultation';
   registrationUrl?: string;
   isLive?: boolean;
+  category?: string;
+  videoUrl?: string;
+  featured?: boolean;
 }
 
 export interface DailyProgress {

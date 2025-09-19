@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Droplets, Heart, Ruler, Target, TrendingUp, Pill, AlertTriangle } from 'lucide-react-native';
 import { useHealth } from '@/hooks/health-store';
 import ProgressCard from '@/components/ProgressCard';
 
 export default function HomeScreen() {
   const { getTodayProgress, challenge, healthMetrics } = useHealth();
+  const insets = useSafeAreaInsets();
   const progress = getTodayProgress();
   
   const completedDays = challenge.filter(day => day.completed).length;
@@ -80,7 +81,11 @@ export default function HomeScreen() {
         <Text style={styles.headerSubtitle}>Your journey to better health</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 250 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionTitle}>Today&apos;s Progress</Text>
         
         <View style={styles.progressGrid}>
@@ -90,7 +95,7 @@ export default function HomeScreen() {
                 title="Glucose Test"
                 value={healthMetrics.glucoseLevel.toString()}
                 subtitle="mg/dL latest"
-                color="#22c55e"
+                color={healthMetrics.glucoseLevel <= 100 ? "#22c55e" : healthMetrics.glucoseLevel <= 125 ? "#f59e0b" : "#ef4444"}
                 icon={<Droplets color="#ffffff" size={20} />}
               />
             </View>
@@ -109,9 +114,9 @@ export default function HomeScreen() {
             <View style={styles.progressItem}>
               <ProgressCard
                 title="Waist Goal"
-                value="82cm"
+                value={`${healthMetrics.waistMeasurement || 82}cm`}
                 subtitle="Latest measurement"
-                color="#22c55e"
+                color={(healthMetrics.waistMeasurement || 82) < 82 ? "#22c55e" : (healthMetrics.waistMeasurement || 82) === 82 ? "#f59e0b" : "#ef4444"}
                 icon={<Ruler color="#ffffff" size={20} />}
               />
             </View>
@@ -127,28 +132,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {currentDay && (
-          <View style={styles.challengeSection}>
-            <Text style={styles.sectionTitle}>Today&apos;s Challenge</Text>
-            <View style={styles.challengeCard}>
-              <View style={styles.challengeHeader}>
-                <Target color="#22c55e" size={24} />
-                <Text style={styles.challengeTitle}>Day {currentDay.day} - Detox Challenge</Text>
-              </View>
-              <Text style={styles.challengeDescription}>
-                Log your meals, track symptoms, and stay wheat-free!
-              </Text>
-              <View style={styles.challengeStatus}>
-                <Text style={[
-                  styles.challengeStatusText,
-                  { color: currentDay.completed ? '#22c55e' : '#6b7280' }
-                ]}>
-                  {currentDay.completed ? '✓ Completed' : 'In Progress'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
 
         {/* Medical Warning Banner */}
         <View style={styles.warningBanner}>

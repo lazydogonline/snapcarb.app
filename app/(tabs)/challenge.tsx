@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
-import { CheckCircle, Circle, Calendar, Edit3 } from 'lucide-react-native';
+import { CheckCircle, Circle, Calendar, Edit3, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHealth } from '@/hooks/health-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ChallengeScreen() {
   const { challenge, updateChallengeDay, meals, loadData } = useHealth();
+  const insets = useSafeAreaInsets();
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [symptoms, setSymptoms] = useState('');
   const [notes, setNotes] = useState('');
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
   const completedDays = challenge.filter(day => day.completed).length;
 
@@ -133,9 +136,9 @@ export default function ChallengeScreen() {
       console.log('Data reloaded successfully!');
       Alert.alert('Challenge Reset', 'Your challenge has been reset successfully!');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resetting challenge:', error);
-      Alert.alert('Error', `Failed to reset challenge: ${error.message}`);
+      Alert.alert('Error', `Failed to reset challenge: ${error?.message || 'Unknown error'}`);
     }
   };
 
@@ -168,11 +171,16 @@ export default function ChallengeScreen() {
   };
 
   const getChallengeStatusColor = () => {
+    const today = new Date();
+    const todayString = today.toDateString();
+    
     const missedDays = challenge.filter(day => {
       const dayDate = new Date(day.date);
-      const today = new Date();
       const isPast = dayDate < today;
-      return isPast && !day.completed;
+      const isToday = day.date === todayString;
+      
+      // Don't count today as "missed" - only count truly past days
+      return isPast && !isToday && !day.completed;
     }).length;
 
     if (missedDays > 0) return '#ef4444'; // Red - bad (missed days)
@@ -181,11 +189,16 @@ export default function ChallengeScreen() {
   };
 
   const getChallengeStatusText = () => {
+    const today = new Date();
+    const todayString = today.toDateString();
+    
     const missedDays = challenge.filter(day => {
       const dayDate = new Date(day.date);
-      const today = new Date();
       const isPast = dayDate < today;
-      return isPast && !day.completed;
+      const isToday = day.date === todayString;
+      
+      // Don't count today as "missed" - only count truly past days
+      return isPast && !isToday && !day.completed;
     }).length;
 
     if (missedDays > 0) return 'Reset Required';
@@ -195,18 +208,24 @@ export default function ChallengeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={[styles.header, { backgroundColor: getChallengeStatusColor() }]}>
-        <Text style={styles.headerTitle}>10-Day Detox Challenge</Text>
-        <Text style={styles.headerSubtitle}>
-          {completedDays}/10 days completed ({progressPercentage.toFixed(0)}%)
-        </Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+    <View style={styles.container}>
+      <SafeAreaView style={{ backgroundColor: getChallengeStatusColor() }}>
+        <View style={[styles.header, { backgroundColor: getChallengeStatusColor() }]}>
+          <Text style={styles.headerTitle}>10-Day Detox Challenge</Text>
+          <Text style={styles.headerSubtitle}>
+            {completedDays}/10 days completed ({progressPercentage.toFixed(0)}%)
+          </Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Challenge Progress Section - Always at top */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Challenge Progress</Text>
@@ -360,8 +379,12 @@ export default function ChallengeScreen() {
         {challenge.some(day => {
           const dayDate = new Date(day.date);
           const today = new Date();
+          const todayString = today.toDateString();
           const isPast = dayDate < today;
-          return isPast && !day.completed;
+          const isToday = day.date === todayString;
+          
+          // Don't count today as "missed" - only count truly past days
+          return isPast && !isToday && !day.completed;
         }) && (
           <View style={styles.warningBanner}>
             <Text style={styles.warningTitle}>⚠️ Challenge Needs Reset</Text>
@@ -377,9 +400,21 @@ export default function ChallengeScreen() {
 
 
         <View style={styles.challengeInfo}>
-          <Text style={styles.sectionTitle}>Challenge Guidelines</Text>
+          <TouchableOpacity 
+            style={styles.guidelinesHeader}
+            onPress={() => setShowGuidelines(!showGuidelines)}
+          >
+            <Text style={styles.sectionTitle}>Challenge Guidelines</Text>
+            {showGuidelines ? (
+              <ChevronUp size={24} color="#374151" />
+            ) : (
+              <ChevronDown size={24} color="#374151" />
+            )}
+          </TouchableOpacity>
           
-          <View style={styles.guidelineCard}>
+          {showGuidelines && (
+            <>
+              <View style={styles.guidelineCard}>
             <Text style={styles.guidelineTitle}>🚫 Avoid These Foods</Text>
             <Text style={styles.guidelineText}>
               Wheat, grains, seed oils (canola, soybean, vegetable oils), processed foods
@@ -425,9 +460,12 @@ export default function ChallengeScreen() {
               <Text style={styles.guidelineLinkText}>Learn More About DR Davis Program</Text>
             </TouchableOpacity>
           </View>
+            </>
+          )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+      <SafeAreaView style={{ backgroundColor: 'transparent' }} />
+    </View>
   );
 }
 
@@ -662,6 +700,13 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 24,
   },
+  guidelinesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
   guidelineCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -792,49 +837,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#e5e7eb',
   },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#ffffff',
-    minHeight: 44,
-  },
-  textArea: {
-    minHeight: 88,
-    textAlignVertical: 'top',
-  },
   formActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 20,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6b7280',
   },
   saveButton: {
     flex: 1,
@@ -881,5 +887,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#22c55e',
     fontWeight: '600',
+  },
+  dayTitleMissed: {
+    color: '#dc2626',
   },
 });

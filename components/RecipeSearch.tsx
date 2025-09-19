@@ -69,28 +69,124 @@ export default function RecipeSearch({ initialQuery = '' }: RecipeSearchProps) {
   };
 
   const handleSaveRecipe = async (recipeToSave: SnapCarbRecipe) => {
+    setSaving(true);
     try {
       await RecipeService.saveRecipe(recipeToSave);
-      Alert.alert('Saved!', 'Recipe saved to your collection');
+      Alert.alert(
+        '✅ Recipe Saved!', 
+        `"${recipeToSave.title}" has been added to your collection.\n\nFind it in "My Recipe Collection" below.`,
+        [{ text: 'Great!', style: 'default' }]
+      );
     } catch (error) {
       console.error('Error saving recipe:', error);
-      Alert.alert('Error', 'Failed to save recipe');
+      Alert.alert('❌ Save Failed', 'Could not save recipe. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleShareRecipe = (recipeToShare: SnapCarbRecipe) => {
-    const shareText = `${recipeToShare.title}\n\n${recipeToShare.description}\n\nIngredients:\n${recipeToShare.ingredients.map(ing => `• ${ing.amount} ${ing.name}`).join('\n')}\n\nInstructions:\n${recipeToShare.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}\n\nNutrition (per serving):\n• ${recipeToShare.nutrition.netCarbs}g Net Carbs\n• ${recipeToShare.nutrition.protein}g Protein\n• ${recipeToShare.nutrition.fat}g Fat\n• ${recipeToShare.nutrition.fiber}g Fiber`;
+    const shareText = `🔥 Amazing SnapCarb Recipe from the SnapCarb App!
+
+${recipeToShare.title}
+${recipeToShare.description}
+
+🤖 AI-Generated • Only ${recipeToShare.netCarbs}g Net Carbs!
+
+Ingredients:
+${recipeToShare.ingredients.map(ing => `• ${ing.amount} ${ing.name}`).join('\n')}
+
+Instructions:
+${recipeToShare.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
+
+📊 Nutrition (per serving):
+• ${recipeToShare.nutrition.netCarbs}g Net Carbs
+• ${recipeToShare.nutrition.protein}g Protein
+• ${recipeToShare.nutrition.fat}g Fat
+• ${recipeToShare.nutrition.fiber}g Fiber
+
+📱 Get the SnapCarb App for instant AI recipe generation:
+${appDownloadLinks.web.website}
+
+#SnapCarb #LowCarb #KetoRecipes #HealthyEating #AIChef`;
     
-    if (navigator.share) {
-      navigator.share({
-        title: recipeToShare.title,
-        text: shareText,
-      });
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(shareText);
-      Alert.alert('Recipe Copied!', 'Recipe has been copied to your clipboard.');
+    // Show comprehensive sharing options
+    Alert.alert(
+      'Share Recipe',
+      'Choose how you want to share this recipe:',
+      [
+        { text: 'Native Share', onPress: () => {
+          if (navigator.share) {
+            navigator.share({ title: recipeToShare.title, text: shareText });
+          } else {
+            navigator.clipboard.writeText(shareText);
+            Alert.alert('Recipe Copied!', 'Recipe has been copied to your clipboard.');
+          }
+        }},
+        { text: 'Facebook', onPress: () => handleSocialShare(recipeToShare, 'facebook') },
+        { text: 'X (Twitter)', onPress: () => handleSocialShare(recipeToShare, 'twitter') },
+        { text: 'WhatsApp', onPress: () => handleSocialShare(recipeToShare, 'whatsapp') },
+        { text: 'Instagram', onPress: () => handleSocialShare(recipeToShare, 'instagram') },
+        { text: 'Pinterest', onPress: () => handleSocialShare(recipeToShare, 'pinterest') },
+        { text: 'Telegram', onPress: () => handleSocialShare(recipeToShare, 'telegram') },
+        { text: 'LinkedIn', onPress: () => handleSocialShare(recipeToShare, 'linkedin') },
+        { text: 'Reddit', onPress: () => handleSocialShare(recipeToShare, 'reddit') },
+        { text: 'Discord', onPress: () => handleSocialShare(recipeToShare, 'discord') },
+        { text: 'Email', onPress: () => handleSocialShare(recipeToShare, 'email') },
+        { text: 'SMS', onPress: () => handleSocialShare(recipeToShare, 'sms') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleSocialShare = (recipe: SnapCarbRecipe, platform: string) => {
+    const message = `Check out this amazing SnapCarb recipe: ${recipe.title}! 🍎\n\n${recipe.description}\n\nNet Carbs: ${recipe.netCarbs}g per serving\n\nGet the full recipe and more at SnapCarb.app`;
+    
+    let url = '';
+    
+    switch (platform) {
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://snapcarb.app')}&quote=${encodeURIComponent(message)}`;
+        break;
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent('https://snapcarb.app')}`;
+        break;
+      case 'whatsapp':
+        url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+        break;
+      case 'instagram':
+        Alert.alert('Instagram Share', 'Recipe details copied to clipboard! Paste them in your Instagram story or post.', [
+          { text: 'OK', onPress: () => navigator.clipboard.writeText(message) }
+        ]);
+        return;
+      case 'pinterest':
+        url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent('https://snapcarb.app')}&description=${encodeURIComponent(message)}`;
+        break;
+      case 'telegram':
+        url = `https://t.me/share/url?url=${encodeURIComponent('https://snapcarb.app')}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://snapcarb.app')}&summary=${encodeURIComponent(message)}`;
+        break;
+      case 'reddit':
+        url = `https://reddit.com/submit?url=${encodeURIComponent('https://snapcarb.app')}&title=${encodeURIComponent(recipe.title)}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'discord':
+        Alert.alert('Discord Share', 'Recipe details copied to clipboard! Paste them in your Discord chat.', [
+          { text: 'OK', onPress: () => navigator.clipboard.writeText(message) }
+        ]);
+        return;
+      case 'email':
+        url = `mailto:?subject=${encodeURIComponent(`Amazing SnapCarb Recipe: ${recipe.title}`)}&body=${encodeURIComponent(message)}`;
+        break;
+      case 'sms':
+        url = `sms:?body=${encodeURIComponent(message)}`;
+        break;
+      default:
+        return;
     }
+    
+    window.open(url, '_blank');
   };
 
   // Add Jessie Inchauspé food order recommendations
@@ -138,10 +234,12 @@ export default function RecipeSearch({ initialQuery = '' }: RecipeSearchProps) {
       
       if (isAllowed) return false; // Skip allowed ingredients
       
-      // Now check for forbidden ingredients
+      // Now check for forbidden ingredients (but exclude sugar-free items)
+      const hasForbiddenSugar = name.includes('sugar') && !name.includes('sugar-free');
+      
       return name.includes('wheat') || name.includes('rice') || name.includes('corn') || 
              name.includes('oats') || name.includes('barley') || name.includes('rye') ||
-             name.includes('sugar') || name.includes('honey') || name.includes('maple') ||
+             hasForbiddenSugar || name.includes('honey') || name.includes('maple') ||
              name.includes('potato') || name.includes('sweet potato') || name.includes('carrot') ||
              name.includes('beans') || name.includes('lentils') || name.includes('chickpeas') ||
              name.includes('bread') || name.includes('pasta') || 
@@ -376,11 +474,11 @@ Download: ${appDownloadLinks.web.downloadPage}`;
             placeholderTextColor={colors.textSecondary}
             value={query}
             onChangeText={setQuery}
-            onSubmitEditing={handleSearch}
+            onSubmitEditing={() => handleSearch()}
           />
           <TouchableOpacity 
             style={[styles.searchButton, loading && styles.searchButtonDisabled]}
-            onPress={handleSearch}
+            onPress={() => handleSearch()}
             disabled={loading}
           >
             <Search size={20} color={colors.background} />
@@ -405,6 +503,18 @@ Download: ${appDownloadLinks.web.downloadPage}`;
         <View style={styles.recipeContainer}>
           <Text style={styles.recipeTitle}>{recipe.title}</Text>
           <Text style={styles.recipeDescription}>{recipe.description}</Text>
+          
+          {/* Save Button - Prominent Position */}
+          <TouchableOpacity 
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+            onPress={() => handleSaveRecipe(recipe)}
+            disabled={saving}
+          >
+            <BookOpen size={20} color="#ffffff" />
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Saving...' : 'Save Recipe'}
+            </Text>
+          </TouchableOpacity>
           
           {/* SnapCarb + Jessie Inchauspé Smart Recommendations */}
           <View style={styles.recommendationsCard}>
@@ -455,33 +565,34 @@ Download: ${appDownloadLinks.web.downloadPage}`;
           </View>
 
           {/* Recipe Card Display */}
-          <RecipeCard 
-            recipe={recipe} 
-            onSave={() => handleSaveRecipe(recipe)}
-            onShare={() => handleShareRecipe(recipe)}
-          />
+          <RecipeCard recipe={recipe} />
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+          {/* Streamlined Action Bar */}
+          <View style={styles.streamlinedActions}>
+            <TouchableOpacity 
+              style={[styles.primaryActionButton, saving && styles.primaryActionButtonDisabled]} 
+              onPress={() => handleSaveRecipe(recipe)}
+              disabled={saving}
+            >
               <BookOpen size={20} color={colors.background} />
-              <Text style={styles.actionButtonText}>Save</Text>
+              <Text style={styles.primaryActionButtonText}>
+                {saving ? 'Saving...' : 'Save Recipe'}
+              </Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-              <Share2 size={20} color={colors.background} />
-              <Text style={styles.actionButtonText}>Share</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleQuickCopy}>
-              <Copy size={20} color={colors.background} />
-              <Text style={styles.actionButtonText}>Copy</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handlePrint}>
-              <Printer size={20} color={colors.background} />
-              <Text style={styles.actionButtonText}>Print</Text>
-            </TouchableOpacity>
+            <View style={styles.secondaryActions}>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={() => handleShareRecipe(recipe)}>
+                <Share2 size={18} color={colors.primary} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={handleQuickCopy}>
+                <Copy size={18} color={colors.primary} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={handlePrint}>
+                <Printer size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -580,6 +691,34 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 16,
   },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981', // Bright green
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    marginTop: 10,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#059669',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  saveButtonDisabled: {
+    backgroundColor: colors.secondary,
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
   recommendationsCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -657,28 +796,56 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 8,
-  },
-  actionButton: {
+  streamlinedActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    flex: 1,
-    minWidth: '48%',
-    justifyContent: 'center',
+    gap: 12,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
-  actionButtonText: {
+  primaryActionButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  primaryActionButtonDisabled: {
+    backgroundColor: colors.secondary,
+    opacity: 0.6,
+  },
+  primaryActionButtonText: {
+    color: colors.background,
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: 8,
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  secondaryActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });

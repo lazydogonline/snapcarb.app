@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, SafeAreaView, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { Utensils, Share2, BookOpen, ArrowLeft, Camera, Trash2 } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Utensils, Share2, ArrowLeft, Camera, Trash2, BookOpen } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import { analyzeMealForSnapCarb } from '../../services/gemini-ai-service';
 import RecipeSearch from '../../components/RecipeSearch';
@@ -13,6 +14,8 @@ export default function MealsScreen() {
   const [showRecipeCollection, setShowRecipeCollection] = useState(false);
   const [mealAnalysis, setMealAnalysis] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleShareApp = () => {
     const message = `🍎 Discover SnapCarb - The Revolutionary Health App!
@@ -33,6 +36,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
       { text: 'Cancel', style: 'cancel' }
     ]);
   };
+
 
   const handleMyRecipes = () => {
     setShowRecipeCollection(true);
@@ -61,6 +65,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const handleTakePhoto = async () => {
+    console.log('📸 Take Photo button clicked!');
     Alert.alert(
       'Select Photo',
       'Choose how you want to add a photo:',
@@ -73,6 +78,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const openCamera = async () => {
+    console.log('📷 Opening camera...');
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -81,7 +87,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -95,6 +101,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const openImagePicker = async () => {
+    console.log('🖼️ Opening image picker...');
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -103,7 +110,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -117,49 +124,120 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const handleAnalyzePhoto = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage) {
+      Alert.alert('No Image', 'Please take a photo or select an image first.');
+      return;
+    }
+    
+    if (isAnalyzing) {
+      console.log('⏳ Analysis already in progress, ignoring click');
+      return;
+    }
+    
+    console.log('🔍 Starting AI analysis...');
+    console.log('📸 Image path:', selectedImage);
+    
+    setIsAnalyzing(true);
     
     try {
       // Show loading state
       Alert.alert('Analyzing...', 'Processing your meal photo with AI');
       
-      console.log('🔍 Starting AI analysis...');
-      console.log('📸 Image path:', selectedImage);
+      // Convert image to base64 with detailed error handling
+      let base64;
+      try {
+        console.log('📁 Reading file from:', selectedImage);
+        console.log('📁 File URI type:', typeof selectedImage);
+        console.log('📁 File URI starts with file://', selectedImage.startsWith('file://'));
+        
+        // Skip file validation to avoid deprecated APIs - readAsStringAsync will fail if file doesn't exist
+        console.log('📋 Proceeding with base64 conversion (file validation skipped to avoid deprecated APIs)');
+        
+        base64 = await FileSystem.readAsStringAsync(selectedImage, {
+          encoding: 'base64',
+        });
+        
+        console.log('📦 Base64 conversion successful!');
+        console.log('📦 Base64 length:', base64.length);
+        console.log('📦 Base64 starts with:', base64.substring(0, 50) + '...');
+        
+        // Validate base64 string
+        if (!base64 || base64.length < 100) {
+          throw new Error(`Base64 string is too short or empty. Length: ${base64?.length || 0}`);
+        }
+        
+        // Test base64 format
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Regex.test(base64)) {
+          throw new Error('Base64 string contains invalid characters');
+        }
+        
+      } catch (base64Error: any) {
+        console.error('❌ Base64 conversion failed:', base64Error);
+        console.error('❌ Error details:', base64Error?.message || 'Unknown error');
+        console.error('❌ Error stack:', base64Error?.stack || 'No stack trace');
+        Alert.alert('Image Processing Error', `Failed to process image: ${base64Error?.message || 'Unknown error'}\n\nPlease try taking another photo.`);
+        setIsAnalyzing(false);
+        return;
+      }
       
-      // Convert image to base64
-      const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      console.log('📦 Base64 length:', base64.length);
       console.log('🤖 Calling Gemini AI...');
       
-      // Call real Gemini AI analysis
-      const aiResult = await analyzeMealForSnapCarb(base64);
+      // Call real Gemini AI analysis with error handling
+      let aiResult;
+      try {
+        aiResult = await analyzeMealForSnapCarb(base64);
+        console.log('✅ AI Result:', aiResult);
+      } catch (aiError: any) {
+        console.error('❌ Gemini AI analysis failed:', aiError);
+        console.error('❌ AI Error details:', aiError?.message || 'Unknown AI error');
+        
+        if (aiError?.message?.includes('base64') || aiError?.message?.includes('Base64')) {
+          Alert.alert('Image Format Error', 'There was an issue processing your image format. Please try taking another photo with better lighting.');
+        } else {
+          Alert.alert('Analysis Error', `AI analysis failed: ${aiError?.message || 'Unknown error'}\n\nPlease try again or contact support.`);
+        }
+        setIsAnalyzing(false);
+        return;
+      }
       
-      console.log('✅ AI Result:', aiResult);
-      
-      // Transform AI result to match our UI format
+      // Transform enhanced AI result with USDA data to match our UI format
       const analysis = {
         score: aiResult.compliance.score.toFixed(1),
         items: aiResult.nutrition.items.length,
-        notes: aiResult.compliance.recommendations.join(' ') || aiResult.nutrition.notes || 'Analysis complete.',
-        ingredients: aiResult.nutrition.items.map(item => item.name),
+        notes: aiResult.compliance.recommendations.join(' ') || aiResult.nutrition.notes || 'Analysis complete with USDA nutrition data.',
+        ingredients: aiResult.nutrition.items.map(item => 
+          `${item.name} (${item.portion_description || 'unknown portion'}) ~`
+        ),
         nutrition: {
           totalCarbs: `${aiResult.nutrition.total_carbs_g.toFixed(1)}g`,
-          netCarbs: `${aiResult.nutrition.total_carbs_g.toFixed(1)}g`, // Using total as net for now
-          protein: 'Calculating...' // AI doesn't return protein yet
+          netCarbs: `${aiResult.nutrition.net_carbs_g.toFixed(1)}g`, // Real net carbs from USDA
+          protein: `${aiResult.nutrition.protein_g.toFixed(1)}g`,
+          fiber: `${aiResult.nutrition.fiber_g.toFixed(1)}g`,
+          calories: `${Math.round(aiResult.nutrition.calories)} cal`
         },
         warnings: aiResult.compliance.warnings,
-        isCompliant: aiResult.compliance.isCompliant
+        isCompliant: aiResult.compliance.isCompliant,
+        usdaVerified: aiResult.nutrition.items.filter(i => i.usda_verified).length
       };
       
       setMealAnalysis(analysis);
+      console.log('✅ Analysis completed successfully!');
       
-    } catch (error) {
-      console.error('AI Analysis Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Analysis Failed', `Error: ${errorMessage}\n\nPlease check your internet connection and try again.`);
+    } catch (error: any) {
+      console.error('❌ Top-level error in handleAnalyzePhoto:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error message:', error?.message || 'Unknown error');
+      console.error('❌ Error stack:', error?.stack || 'No stack trace');
+      
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      Alert.alert(
+        'Analysis Failed', 
+        `Error: ${errorMessage}\n\nPlease check your internet connection and try again.`
+      );
+    } finally {
+      setIsAnalyzing(false);
+      console.log('🔄 Analysis state reset');
     }
   };
 
@@ -187,7 +265,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
     <SafeAreaView style={styles.container}>
       <ScrollView 
         style={styles.scrollContainer} 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 200 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -202,21 +280,7 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           <Text style={styles.subtitle}>Find recipes and plan your meals</Text>
         </View>
 
-        {/* Recipe Search Section - Now First */}
-        <RecipeSearch />
-        
-        {/* Recipe Collection */}
-        <RecipeCollection />
-
-        {/* My Recipes Button */}
-        <View style={styles.myRecipesSection}>
-          <TouchableOpacity style={styles.myRecipesButton} onPress={handleMyRecipes}>
-            <BookOpen size={20} color={colors.background} />
-            <Text style={styles.myRecipesButtonText}>My Recipe Collection</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Analyze Your Meal Section - Now After Recipes */}
+        {/* Analyze Your Meal Section - Now Prominently Placed First */}
         <View style={styles.analyzeSection}>
           <View style={styles.analyzeHeader}>
             <Camera size={24} color={colors.primary} />
@@ -234,8 +298,14 @@ Download now: ${appDownloadLinks.getDownloadLink()}
                 <TouchableOpacity style={styles.retakeButton} onPress={handleTakePhoto}>
                   <Text style={styles.retakeButtonText}>Retake</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.analyzeActionButton} onPress={handleAnalyzePhoto}>
-                  <Text style={styles.analyzeActionButtonText}>Analyze</Text>
+                <TouchableOpacity 
+                  style={[styles.analyzeActionButton, isAnalyzing && styles.analyzeActionButtonDisabled]} 
+                  onPress={handleAnalyzePhoto}
+                  disabled={isAnalyzing}
+                >
+                  <Text style={styles.analyzeActionButtonText}>
+                    {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -296,22 +366,46 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           {mealAnalysis.nutrition && (
             <View style={styles.nutritionCard}>
               <Text style={styles.nutritionTitle}>SnapCarb Nutrition</Text>
+              <Text style={styles.nutritionSubtitle}>For entire meal shown in photo</Text>
+              <View style={styles.disclaimerBox}>
+                <Text style={styles.disclaimerText}>
+                  ⚠️ AI estimates may be inaccurate. Verify with nutrition labels for precise tracking.
+                </Text>
+              </View>
               <View style={styles.nutritionRow}>
                 <Text style={styles.nutritionLabel}>Total Carbs:</Text>
-                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.totalCarbs}g</Text>
+                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.totalCarbs}</Text>
               </View>
               <View style={styles.nutritionRow}>
                 <Text style={styles.nutritionLabel}>Net Carbs:</Text>
-                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.netCarbs}g</Text>
+                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.netCarbs}</Text>
               </View>
               <View style={styles.nutritionRow}>
                 <Text style={styles.nutritionLabel}>Protein:</Text>
-                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.protein}g</Text>
+                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.protein}</Text>
+              </View>
+              <View style={styles.nutritionRow}>
+                <Text style={styles.nutritionLabel}>Fiber:</Text>
+                <Text style={styles.nutritionValue}>{mealAnalysis.nutrition.fiber}</Text>
               </View>
             </View>
           )}
         </View>
       )}
+
+        {/* Recipe Search Section */}
+        <RecipeSearch />
+        
+        {/* My Saved Recipes Link */}
+        <View style={styles.savedRecipesSection}>
+          <TouchableOpacity style={styles.savedRecipesButton} onPress={handleMyRecipes}>
+            <BookOpen size={20} color={colors.primary} />
+            <Text style={styles.savedRecipesButtonText}>View My Saved Recipes</Text>
+            <ArrowLeft size={16} color={colors.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+        </View>
+
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -326,7 +420,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Extra space for tab bar
+    // Dynamic padding applied inline based on safe area insets
   },
   header: {
     alignItems: 'center',
@@ -359,31 +453,36 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  myRecipesSection: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
+  content: {
+    flex: 1,
   },
-  myRecipesButton: {
+  savedRecipesSection: {
+    paddingHorizontal: 20,
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  savedRecipesButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.primary,
     padding: 16,
     borderRadius: 12,
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  myRecipesButtonText: {
+  savedRecipesButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.background,
-    marginLeft: 8,
-  },
-  content: {
+    color: colors.primary,
     flex: 1,
+    textAlign: 'center',
   },
   analyzeSection: {
     paddingHorizontal: 20,
@@ -514,7 +613,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.text,
+    marginBottom: 4,
+  },
+  nutritionSubtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  disclaimerBox: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    padding: 8,
     marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  disclaimerText: {
+    fontSize: 11,
+    color: '#92400E',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   nutritionRow: {
     flexDirection: 'row',
@@ -580,6 +699,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
+  },
+  analyzeActionButtonDisabled: {
+    backgroundColor: colors.secondary,
+    opacity: 0.6,
   },
   analyzeActionButtonText: {
     color: colors.background,

@@ -5,7 +5,6 @@ import {
   BookOpen, 
   Search, 
   Filter, 
-  Plus, 
   Share2, 
   Trash2, 
   Heart,
@@ -16,8 +15,7 @@ import {
   Facebook,
   Twitter,
   MessageCircle,
-  Instagram,
-  Pinterest
+  Instagram
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { SnapCarbRecipe } from '../services/gemini-ai-service';
@@ -50,9 +48,9 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      // Load recipes from Supabase
+      // Load recipes from AsyncStorage
       const userRecipes = await RecipeService.getUserRecipes();
-      setRecipes(userRecipes);
+      setRecipes((userRecipes || []) as SnapCarbRecipe[]);
     } catch (error) {
       console.error('Error loading recipes:', error);
       // For now, show some sample recipes
@@ -83,10 +81,12 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
     // Apply category filter
     switch (activeFilter) {
       case 'favorites':
-        filtered = filtered.filter(recipe => recipe.isFavorite);
+        // Since isFavorite doesn't exist, show all recipes for now
+        filtered = filtered;
         break;
       case 'recent':
-        filtered = filtered.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        // Since createdAt doesn't exist, sort by title alphabetically
+        filtered = filtered.sort((a, b) => a.title.localeCompare(b.title));
         break;
       case 'low-carb':
         filtered = filtered.filter(recipe => recipe.netCarbs <= 10);
@@ -99,20 +99,30 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
   };
 
   const handleShareRecipe = async (recipe: SnapCarbRecipe) => {
-    const message = `🍎 SnapCarb Recipe: ${recipe.title}
+    const message = `🔥 Amazing SnapCarb Recipe from the SnapCarb App!
 
-📝 ${recipe.description}
-⏱️ Prep: ${recipe.prepTime}min | Cook: ${recipe.cookTime}min
-👥 Serves: ${recipe.servings}
-📊 Net Carbs: ${recipe.netCarbs}g per serving
+${recipe.title}
+${recipe.description}
 
-🥗 Ingredients:
+🤖 AI-Generated • Only ${recipe.netCarbs}g Net Carbs!
+⏱️ Prep: ${recipe.prepTime}min | Cook: ${recipe.cookTime}min | Serves: ${recipe.servings}
+
+Ingredients:
 ${recipe.ingredients.map(ing => `• ${ing.amount} ${ing.name}`).join('\n')}
 
-👨‍🍳 Instructions:
+Instructions:
 ${recipe.instructions.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
-${appDownloadLinks.getDownloadMessage()}`;
+📊 Nutrition (per serving):
+• ${recipe.netCarbs}g Net Carbs
+• ${recipe.nutrition.protein}g Protein
+• ${recipe.nutrition.fat}g Fat
+• ${recipe.nutrition.fiber}g Fiber
+
+📱 Get the SnapCarb App for instant AI recipe generation:
+${appDownloadLinks.web.website}
+
+#SnapCarb #LowCarb #KetoRecipes #HealthyEating #AIChef`;
 
     try {
       const result = await Share.share({
@@ -137,10 +147,10 @@ ${appDownloadLinks.getDownloadMessage()}`;
     
     switch (platform) {
       case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appDownloadLinks.website)}&quote=${encodeURIComponent(message)}`;
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appDownloadLinks.web.website)}&quote=${encodeURIComponent(message)}`;
         break;
       case 'twitter':
-        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(appDownloadLinks.website)}`;
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(appDownloadLinks.web.website)}`;
         break;
       case 'whatsapp':
         url = `whatsapp://send?text=${encodeURIComponent(message)}`;
@@ -152,7 +162,28 @@ ${appDownloadLinks.getDownloadMessage()}`;
         ]);
         return;
       case 'pinterest':
-        url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(appDownloadLinks.website)}&description=${encodeURIComponent(message)}`;
+        url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(appDownloadLinks.web.website)}&description=${encodeURIComponent(message)}`;
+        break;
+      case 'telegram':
+        url = `https://t.me/share/url?url=${encodeURIComponent(appDownloadLinks.web.website)}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(appDownloadLinks.web.website)}&summary=${encodeURIComponent(message)}`;
+        break;
+      case 'reddit':
+        url = `https://reddit.com/submit?url=${encodeURIComponent(appDownloadLinks.web.website)}&title=${encodeURIComponent(recipe.title)}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'discord':
+        // Discord doesn't support direct URL sharing, copy to clipboard
+        Alert.alert('Discord Share', 'Recipe details copied to clipboard! Paste them in your Discord chat.', [
+          { text: 'OK', onPress: () => Clipboard.setString(message) }
+        ]);
+        return;
+      case 'email':
+        url = `mailto:?subject=${encodeURIComponent(`Amazing SnapCarb Recipe: ${recipe.title}`)}&body=${encodeURIComponent(message)}`;
+        break;
+      case 'sms':
+        url = `sms:?body=${encodeURIComponent(message)}`;
         break;
       default:
         return;
@@ -175,6 +206,12 @@ ${appDownloadLinks.getDownloadMessage()}`;
         { text: 'WhatsApp', onPress: () => handleSocialShare(recipe, 'whatsapp') },
         { text: 'Instagram', onPress: () => handleSocialShare(recipe, 'instagram') },
         { text: 'Pinterest', onPress: () => handleSocialShare(recipe, 'pinterest') },
+        { text: 'Telegram', onPress: () => handleSocialShare(recipe, 'telegram') },
+        { text: 'LinkedIn', onPress: () => handleSocialShare(recipe, 'linkedin') },
+        { text: 'Reddit', onPress: () => handleSocialShare(recipe, 'reddit') },
+        { text: 'Discord', onPress: () => handleSocialShare(recipe, 'discord') },
+        { text: 'Email', onPress: () => handleSocialShare(recipe, 'email') },
+        { text: 'SMS', onPress: () => handleSocialShare(recipe, 'sms') },
         { text: 'Cancel', style: 'cancel' }
       ]
     );
@@ -206,15 +243,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
 
   const handleToggleFavorite = async (recipeId: string) => {
     try {
-      const updatedRecipes = recipes.map(recipe =>
-        recipe.id === recipeId 
-          ? { ...recipe, isFavorite: !recipe.isFavorite }
-          : recipe
-      );
-      setRecipes(updatedRecipes);
-      
-      // Update in Supabase
-      await RecipeService.updateRecipe(recipeId, { isFavorite: !recipes.find(r => r.id === recipeId)?.isFavorite });
+      // Since isFavorite doesn't exist on SnapCarbRecipe, we'll just show a message
+      Alert.alert('Feature Coming Soon', 'Favorites functionality will be added in a future update!');
     } catch (error) {
       console.error('Error updating favorite:', error);
     }
@@ -242,11 +272,13 @@ ${appDownloadLinks.getDownloadMessage()}`;
         'Steam cauliflower rice and broccoli',
         'Serve beef over vegetables'
       ],
-      nutrition: { calories: 350, protein: 35, fat: 20, fiber: 5, netCarbs: 8 },
+      nutrition: { protein: 35, fat: 20, fiber: 5, netCarbs: 8 },
       tags: ['low-carb', 'high-protein', 'snapcarb-approved'],
       source: 'SnapCarb Chef Collection',
-      isFavorite: true,
-      createdAt: new Date().toISOString()
+      coolFacts: {
+        omega_3: 'Grass-fed beef contains beneficial omega-3 fatty acids',
+        cla: 'Rich in CLA (conjugated linoleic acid) which may aid in weight management'
+      }
     },
     {
       id: '2',
@@ -269,11 +301,13 @@ ${appDownloadLinks.getDownloadMessage()}`;
         'Season salmon and cook for 12-15 minutes',
         'Serve with lemon butter sauce'
       ],
-      nutrition: { calories: 420, protein: 38, fat: 28, fiber: 6, netCarbs: 6 },
+      nutrition: { protein: 38, fat: 28, fiber: 6, netCarbs: 6 },
       tags: ['omega-3', 'anti-inflammatory', 'snapcarb-approved'],
       source: 'SnapCarb Chef Collection',
-      isFavorite: false,
-      createdAt: new Date().toISOString()
+      coolFacts: {
+        omega_3: 'Wild-caught salmon is rich in omega-3 fatty acids',
+        anti_inflammatory: 'Brussels sprouts contain powerful anti-inflammatory compounds'
+      }
     }
   ];
 
@@ -292,8 +326,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
         >
           <Heart 
             size={20} 
-            color={recipe.isFavorite ? colors.error : colors.textSecondary} 
-            fill={recipe.isFavorite ? colors.error : 'transparent'}
+            color={colors.textSecondary} 
+            fill='transparent'
           />
         </TouchableOpacity>
       </View>
@@ -413,22 +447,30 @@ ${appDownloadLinks.getDownloadMessage()}`;
       >
         {filteredRecipes.length === 0 ? (
           <View style={styles.emptyState}>
-            <BookOpen size={64} color={colors.textSecondary} />
-            <Text style={styles.emptyStateTitle}>No recipes found</Text>
-            <Text style={styles.emptyStateText}>
-              {searchQuery ? 'Try adjusting your search' : 'Use the "Add New Recipe" button below to start building your collection'}
-            </Text>
+            {searchQuery ? (
+              <>
+                <Search size={64} color={colors.textSecondary} />
+                <Text style={styles.emptyStateTitle}>No recipes match your search</Text>
+                <Text style={styles.emptyStateText}>
+                  Try a different search term or browse all your saved recipes
+                </Text>
+              </>
+            ) : (
+              <>
+                <BookOpen size={64} color={colors.primary} />
+                <Text style={styles.emptyStateTitle}>No Saved Recipes Yet</Text>
+                <Text style={styles.emptyStateText}>
+                  When you find recipes you love in the Meals tab, save them here for quick access
+                </Text>
+              </>
+            )}
           </View>
         ) : (
           filteredRecipes.map(renderRecipeCard)
         )}
       </ScrollView>
 
-      {/* Add Recipe Button */}
-      <TouchableOpacity style={styles.addButton}>
-        <Plus size={24} color={colors.background} />
-        <Text style={styles.addButtonText}>Add New Recipe</Text>
-      </TouchableOpacity>
+      {/* Removed non-functional Add Recipe button - keeping it clean and focused */}
     </View>
   );
 }
@@ -511,6 +553,7 @@ const styles = StyleSheet.create({
   recipesList: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 100, // Space for bottom navigation
   },
   recipeCard: {
     backgroundColor: colors.cardBackground,
@@ -601,7 +644,8 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 60,
   },
   emptyStateTitle: {
     fontSize: 20,
@@ -614,22 +658,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 8,
   },
-  addButton: {
-    flexDirection: 'row',
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyStateActions: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
   },
-  addButtonText: {
+  discoverButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  discoverButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.background,
-    marginLeft: 8,
   },
   loadingContainer: {
     flex: 1,

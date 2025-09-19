@@ -1,18 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, Target, CheckCircle, XCircle, AlertCircle, Share2, Bookmark, Lightbulb, Heart, Leaf, Brain, Shield, Zap } from 'lucide-react-native';
 import { SnapCarbRecipe } from '../services/recipe-service';
 
 interface RecipeCardProps {
   recipe: SnapCarbRecipe;
-  onSave?: () => void;
-  onShare?: () => void;
 }
 
 const { width } = Dimensions.get('window');
 
-export default function RecipeCard({ recipe, onSave, onShare }: RecipeCardProps) {
+export default function RecipeCard({ recipe }: RecipeCardProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Easy': return '#10B981';
@@ -31,6 +29,15 @@ export default function RecipeCard({ recipe, onSave, onShare }: RecipeCardProps)
 
   return (
     <View style={styles.container}>
+      {/* Recipe Image */}
+      {recipe.imageUrl && (
+        <Image 
+          source={{ uri: recipe.imageUrl }}
+          style={styles.recipeImage}
+          resizeMode="cover"
+        />
+      )}
+      
       {/* Header Section */}
       <LinearGradient
         colors={['#1F2937', '#374151']}
@@ -245,18 +252,6 @@ export default function RecipeCard({ recipe, onSave, onShare }: RecipeCardProps)
         <Text style={styles.sourceText}>Source: {recipe.source}</Text>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.actionButton} onPress={onSave}>
-          <Bookmark size={20} color="#6B7280" />
-          <Text style={styles.actionButtonText}>Save</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
-          <Share2 size={20} color="#6B7280" />
-          <Text style={styles.actionButtonText}>Share</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -266,6 +261,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
     minHeight: '100%',
+  },
+  recipeImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#F3F4F6',
   },
   header: {
     padding: 20,
@@ -458,22 +458,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
-    paddingBottom: 40,
-  },
-  actionButton: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 8,
-    fontWeight: '500',
-  },
   
   // Cool Facts Styles
   sectionHeader: {
@@ -523,5 +507,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     lineHeight: 20,
+  },
+  ingredientHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  complianceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 8,
   },
 });

@@ -55,60 +55,14 @@ export class FoodSearchService {
    */
   async searchFoods(query: string): Promise<FoodSearchResult[]> {
     try {
-      console.log(`Searching for: "${query}" using the full USDA database.`);
+      console.log(`⚠️ USDA search disabled - returning empty results for: "${query}"`);
 
       // Clean up the search term to improve matching.
       const searchTerm = this.cleanIngredientName(query);
 
-      // Build a dynamic query using OR conditions for a more robust search.
-      let searchQuery = supabase
-        .from('food')
-        .select('fdc_id, description, data_type')
-        // Use a filter to search for the full phrase or individual words.
-        .ilike('description', `%${searchTerm}%`)
-        .neq('data_type', 'sub_sample_food')
-        // Prioritize Foundation foods (raw ingredients) over branded foods
-        .order('data_type', { ascending: true });
-
-      // If the search term has multiple words, add an OR condition for each word
-      const keywords = searchTerm.split(' ').filter(word => word.length > 2);
-      if (keywords.length > 1) {
-          const keywordConditions = keywords.map(keyword => `description.ilike.%${keyword}%`).join(',');
-          searchQuery = searchQuery.or(keywordConditions);
-      }
-      
-      // Execute the search
-      const { data, error } = await searchQuery.limit(50);
-
-      if (error) {
-        console.error('❌ Search error:', error);
-        return [];
-      }
-
-      if (!data || data.length === 0) {
-        console.log('ℹ️ No foods found');
-        return [];
-      }
-
-      console.log(`✅ Found ${data.length} foods`);
-      
-      // Get nutrition data for the first few foods
-      const results: FoodSearchResult[] = [];
-      
-      for (const food of data.slice(0, 5)) {
-        try {
-          const nutrition = await this.getFoodNutrition(food.fdc_id);
-          if (nutrition) {
-            results.push(nutrition);
-            console.log(`  - ${nutrition.name} (${nutrition.data_type})`);
-            console.log(`    Protein: ${nutrition.protein}g, Net Carbs: ${nutrition.net_carbs}g`);
-          }
-        } catch (error) {
-          console.warn(`⚠️ Could not get nutrition for ${food.description}:`, error);
-        }
-      }
-
-      return results;
+      // USDA DISABLED FOR SPEED - return empty results immediately
+      console.log('🚫 USDA database search disabled - returning empty results');
+      return [];
 
     } catch (error) {
       console.error('❌ Search failed:', error);
