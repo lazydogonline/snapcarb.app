@@ -11,15 +11,14 @@ function ProfileButton() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Debug: log the auth state
-  console.log('ProfileButton - user:', !!user, 'isAuthenticated:', isAuthenticated());
-
   // Since we're inside AuthGuard with requireAuth=true, we should always be authenticated
   // Show profile button if we're in the authenticated tabs area
   return (
     <TouchableOpacity 
       style={styles.profileButton}
       onPress={() => router.push('/profile')}
+      accessibilityLabel="Open user profile"
+      accessibilityRole="button"
     >
       <User size={20} color={colors.cardBackground} />
     </TouchableOpacity>

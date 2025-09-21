@@ -89,6 +89,8 @@ const EventCalendar = () => {
       <TouchableOpacity 
         style={styles.eventCard}
         onPress={() => setSelectedEvent(item)}
+        accessibilityLabel={`View details for ${item.title} event`}
+        accessibilityRole="button"
       >
         <LinearGradient
           colors={isLive ? ['#ef4444', '#dc2626'] : ['#22c55e', '#16a34a']}
@@ -136,6 +138,8 @@ const EventCalendar = () => {
             <TouchableOpacity 
               style={styles.rsvpButton}
               onPress={() => handleRSVP(item)}
+              accessibilityLabel="RSVP to event"
+              accessibilityRole="button"
             >
               <Text style={styles.rsvpButtonText}>
                 {item.link ? 'Join Now' : 'RSVP'}
@@ -146,6 +150,8 @@ const EventCalendar = () => {
               <TouchableOpacity 
                 style={styles.reminderButton}
                 onPress={() => handleSetReminder(item)}
+                accessibilityLabel="Set reminder for event"
+                accessibilityRole="button"
               >
                 <Bell color="#6b7280" size={16} />
               </TouchableOpacity>

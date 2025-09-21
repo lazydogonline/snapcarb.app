@@ -19,21 +19,15 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   const router = useRouter();
 
   useEffect(() => {
-    console.log('🛡️ AuthGuard state:', { user: !!user, loading, requireAuth, redirectTo });
-    
     if (!loading) {
       // Add a small delay to ensure router is ready
       setTimeout(() => {
         if (requireAuth && !user) {
           // User is not authenticated and auth is required
-          console.log('🛡️ Redirecting to login - auth required but no user');
           router.replace(redirectTo as any);
         } else if (!requireAuth && user) {
           // User is authenticated but auth is not required (e.g., login page)
-          console.log('🛡️ Redirecting to home - user authenticated on login page');
           router.replace('/');
-        } else {
-          console.log('🛡️ No redirect needed');
         }
       }, 100);
     }

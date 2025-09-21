@@ -49,6 +49,8 @@ export default function SupplementsScreen() {
           <TouchableOpacity 
             style={styles.resetButton} 
             onPress={resetDailySupplements}
+            accessibilityLabel="Reset all daily supplement progress"
+            accessibilityRole="button"
           >
             <RotateCcw color="#6b7280" size={20} />
             <Text style={styles.resetButtonText}>Reset Daily Progress</Text>
@@ -65,6 +67,8 @@ export default function SupplementsScreen() {
               supplement.taken && styles.supplementCardTaken
             ]}
             onPress={() => toggleSupplement(supplement.id)}
+            accessibilityLabel={`Mark ${supplement.name} as ${supplement.taken ? 'not taken' : 'taken'}`}
+            accessibilityRole="button"
           >
             <View style={styles.supplementHeader}>
               <View style={styles.supplementIcon}>

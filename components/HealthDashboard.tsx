@@ -274,7 +274,12 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
   };
 
   const renderMetricCard = (title: string, value: string, unit: string, trend: MetricTrend, icon: React.ReactNode) => (
-    <TouchableOpacity style={styles.metricCard} onPress={() => handleMetricClick(title)}>
+    <TouchableOpacity 
+      style={styles.metricCard} 
+      onPress={() => handleMetricClick(title)}
+      accessibilityLabel={`Edit ${title} value: ${value} ${unit}`}
+      accessibilityRole="button"
+    >
       <View style={styles.metricHeader}>
         {icon}
         <Text style={styles.metricTitle}>{title}</Text>
@@ -291,6 +296,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
     <TouchableOpacity
       style={[styles.tabButton, activeTab === category && styles.activeTabButton]}
       onPress={() => setActiveTab(category)}
+      accessibilityLabel={`Switch to ${label} health metrics`}
+      accessibilityRole="button"
     >
       {icon}
       <Text style={[styles.tabButtonText, activeTab === category && styles.activeTabButtonText]}>
@@ -544,12 +551,16 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                   <TouchableOpacity 
                     style={[styles.unitButton, useMetric && styles.unitButtonActive]}
                     onPress={() => setUseMetric(true)}
+                    accessibilityLabel="Use metric units (cm)"
+                    accessibilityRole="button"
                   >
                     <Text style={[styles.unitButtonText, useMetric && styles.unitButtonTextActive]}>cm</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.unitButton, !useMetric && styles.unitButtonActive]}
                     onPress={() => setUseMetric(false)}
+                    accessibilityLabel="Use imperial units (inches)"
+                    accessibilityRole="button"
                   >
                     <Text style={[styles.unitButtonText, !useMetric && styles.unitButtonTextActive]}>inches</Text>
                   </TouchableOpacity>
@@ -633,6 +644,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                 <TouchableOpacity 
                   style={styles.timeButton}
                   onPress={() => setShowStartTimePicker(true)}
+                  accessibilityLabel="Select fasting start time"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.timeButtonText}>{fastingStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
                 </TouchableOpacity>
@@ -642,6 +655,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                 <TouchableOpacity 
                   style={[styles.timeButton, styles.calculatedTimeButton]}
                   onPress={() => setShowEndTimePicker(true)}
+                  accessibilityLabel="Select fasting end time"
+                  accessibilityRole="button"
                 >
                   <Text style={[styles.timeButtonText, styles.paleTimeText]}>{fastingEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
                 </TouchableOpacity>
@@ -689,6 +704,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                   <TouchableOpacity 
                     style={[styles.checkbox, noWheat && styles.checkboxChecked]}
                     onPress={() => setNoWheat(!noWheat)}
+                    accessibilityLabel={`Mark wheat avoidance as ${noWheat ? 'not followed' : 'followed'}`}
+                    accessibilityRole="button"
                   >
                     <Text style={styles.checkboxText}>{noWheat ? '✅ Yes, I avoided wheat' : '❌ No, I ate wheat'}</Text>
                   </TouchableOpacity>
@@ -703,6 +720,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                   <TouchableOpacity 
                     style={[styles.checkbox, noSugar && styles.checkboxChecked]}
                     onPress={() => setNoSugar(!noSugar)}
+                    accessibilityLabel={`Mark sugar avoidance as ${noSugar ? 'not followed' : 'followed'}`}
+                    accessibilityRole="button"
                   >
                     <Text style={styles.checkboxText}>{noSugar ? '✅ Yes, I avoided sugar' : '❌ No, I ate sugar'}</Text>
                   </TouchableOpacity>
@@ -717,6 +736,8 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
                   <TouchableOpacity 
                     style={[styles.checkbox, noGrains && styles.checkboxChecked]}
                     onPress={() => setNoGrains(!noGrains)}
+                    accessibilityLabel={`Mark grains avoidance as ${noGrains ? 'not followed' : 'followed'}`}
+                    accessibilityRole="button"
                   >
                     <Text style={styles.checkboxText}>{noGrains ? '✅ Yes, I avoided grains' : '❌ No, I ate grains'}</Text>
                   </TouchableOpacity>
@@ -725,10 +746,20 @@ export default function HealthDashboard({ userId }: HealthDashboardProps) {
             )}
             
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowMetricModal(false)}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setShowMetricModal(false)}
+                accessibilityLabel="Cancel adding health metric"
+                accessibilityRole="button"
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveMetric}>
+              <TouchableOpacity 
+                style={styles.saveButton} 
+                onPress={handleSaveMetric}
+                accessibilityLabel="Save health metric"
+                accessibilityRole="button"
+              >
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>

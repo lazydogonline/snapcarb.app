@@ -207,6 +207,8 @@ Join me on SnapCarb and start your wellness journey today!
     <TouchableOpacity
       style={[styles.templateButton, selectedTemplate === template && styles.activeTemplateButton]}
       onPress={() => setSelectedTemplate(template)}
+      accessibilityLabel={`Select ${label} template`}
+      accessibilityRole="button"
     >
       {icon}
       <Text style={[styles.templateButtonText, selectedTemplate === template && styles.activeTemplateButtonText]}>
@@ -219,6 +221,8 @@ Join me on SnapCarb and start your wellness journey today!
     <TouchableOpacity
       style={[styles.socialButton, { backgroundColor: color }]}
       onPress={() => handleShare(platform)}
+      accessibilityLabel={`Share progress on ${platform}`}
+      accessibilityRole="button"
     >
       {icon}
       <Text style={styles.socialButtonText}>{platform}</Text>
@@ -266,12 +270,22 @@ Join me on SnapCarb and start your wellness journey today!
 
       {/* Copy & Download */}
       <View style={styles.actionSection}>
-        <TouchableOpacity style={styles.copyButton} onPress={() => handleShare('Copy')}>
+        <TouchableOpacity 
+          style={styles.copyButton} 
+          onPress={() => handleShare('Copy')}
+          accessibilityLabel="Copy progress content"
+          accessibilityRole="button"
+        >
           <Copy size={20} color={colors.background} />
           <Text style={styles.copyButtonText}>Copy Content</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.downloadButton} onPress={() => handleShare('Download')}>
+        <TouchableOpacity 
+          style={styles.downloadButton} 
+          onPress={() => handleShare('Download')}
+          accessibilityLabel="Download progress image"
+          accessibilityRole="button"
+        >
           <Download size={20} color={colors.background} />
           <Text style={styles.downloadButtonText}>Download Image</Text>
         </TouchableOpacity>

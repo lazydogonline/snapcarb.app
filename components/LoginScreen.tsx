@@ -98,6 +98,8 @@ export const LoginScreen: React.FC = () => {
             style={[styles.googleButton, isSigningIn && styles.googleButtonDisabled]}
             onPress={handleGoogleSignIn}
             disabled={isSigningIn || loading}
+            accessibilityLabel="Sign in with Google"
+            accessibilityRole="button"
           >
             {isSigningIn ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -106,6 +108,7 @@ export const LoginScreen: React.FC = () => {
                 <Image
                   source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
                   style={styles.googleIcon}
+                  accessibilityLabel="Google logo"
                 />
                 <Text style={styles.googleButtonText}>
                   Continue with Google

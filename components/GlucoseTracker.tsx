@@ -121,6 +121,8 @@ export default function GlucoseTracker() {
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setIsAddingRecord(true)}
+          accessibilityLabel="Add new glucose test"
+          accessibilityRole="button"
         >
           <Ionicons name="add" size={24} color="white" />
           <Text style={styles.addButtonText}>Add Glucose Test</Text>
@@ -208,12 +210,16 @@ export default function GlucoseTracker() {
                 setIsAddingRecord(false);
                 setCurrentRecord({});
               }}
+              accessibilityLabel="Cancel adding glucose test"
+              accessibilityRole="button"
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.saveButton}
               onPress={addGlucoseRecord}
+              accessibilityLabel="Save glucose test"
+              accessibilityRole="button"
             >
               <Text style={styles.saveButtonText}>Save Test</Text>
             </TouchableOpacity>

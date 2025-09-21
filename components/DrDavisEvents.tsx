@@ -232,6 +232,8 @@ export default function DrDavisEvents() {
               selectedCategory === 'all' && styles.categoryButtonActive
             ]}
             onPress={() => setSelectedCategory('all')}
+            accessibilityLabel="Filter all events"
+            accessibilityRole="button"
           >
             <Text style={[
               styles.categoryButtonText,
@@ -244,6 +246,8 @@ export default function DrDavisEvents() {
               selectedCategory === 'microbiome' && styles.categoryButtonActive
             ]}
             onPress={() => setSelectedCategory('microbiome')}
+            accessibilityLabel="Filter microbiome events"
+            accessibilityRole="button"
           >
             <Text style={[
               styles.categoryButtonText,
@@ -256,6 +260,8 @@ export default function DrDavisEvents() {
               selectedCategory === 'challenge' && styles.categoryButtonActive
             ]}
             onPress={() => setSelectedCategory('challenge')}
+            accessibilityLabel="Filter challenge events"
+            accessibilityRole="button"
           >
             <Text style={[
               styles.categoryButtonText,
@@ -268,6 +274,8 @@ export default function DrDavisEvents() {
               selectedCategory === 'community' && styles.categoryButtonActive
             ]}
             onPress={() => setSelectedCategory('community')}
+            accessibilityLabel="Filter community events"
+            accessibilityRole="button"
           >
             <Text style={[
               styles.categoryButtonText,
@@ -335,6 +343,8 @@ export default function DrDavisEvents() {
                   <TouchableOpacity
                     style={[styles.actionButton, styles.joinButton]}
                     onPress={() => handleEventClick(event)}
+                    accessibilityLabel={`Join live event: ${event.title}`}
+                    accessibilityRole="button"
                   >
                     <TrendingUp size={16} color="white" />
                     <Text style={styles.joinButtonText}>Join Now</Text>
@@ -345,6 +355,8 @@ export default function DrDavisEvents() {
                   <TouchableOpacity
                     style={[styles.actionButton, styles.rsvpButton]}
                     onPress={() => handleRSVP(event)}
+                    accessibilityLabel={`RSVP to event: ${event.title}`}
+                    accessibilityRole="button"
                   >
                     <Bell size={16} color="white" />
                     <Text style={styles.rsvpButtonText}>RSVP</Text>
@@ -354,6 +366,8 @@ export default function DrDavisEvents() {
                 <TouchableOpacity
                   style={[styles.actionButton, styles.detailsButton]}
                   onPress={() => handleEventClick(event)}
+                  accessibilityLabel={`View details for event: ${event.title}`}
+                  accessibilityRole="button"
                 >
                   <ExternalLink size={16} color="#3B82F6" />
                   <Text style={styles.detailsButtonText}>Details</Text>
@@ -383,7 +397,9 @@ export default function DrDavisEvents() {
           </Text>
           <TouchableOpacity
             style={styles.ctaButton}
-              onPress={() => Linking.openURL('https://innercircle.drdavisinfinitehealth.com/landing/')}
+            onPress={() => Linking.openURL('https://innercircle.drdavisinfinitehealth.com/landing/')}
+            accessibilityLabel="Join Dr. Davis Inner Circle membership"
+            accessibilityRole="button"
           >
             <Text style={styles.ctaButtonText}>Join Now - $19.95/month</Text>
           </TouchableOpacity>

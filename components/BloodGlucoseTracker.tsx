@@ -352,6 +352,8 @@ export default function BloodGlucoseTracker() {
                   currentReading.reading_type === type && styles.typeButtonActive
                 ]}
                 onPress={() => setCurrentReading(prev => ({ ...prev, reading_type: type }))}
+                accessibilityLabel={`Select ${type.replace('_', ' ')} glucose reading type`}
+                accessibilityRole="button"
               >
                 <Text style={[
                   styles.typeButtonText,
@@ -378,6 +380,8 @@ export default function BloodGlucoseTracker() {
                     currentReading.meal_type === meal && styles.mealTypeButtonActive
                   ]}
                   onPress={() => setCurrentReading(prev => ({ ...prev, meal_type: meal }))}
+                  accessibilityLabel={`Select ${meal} meal type`}
+                  accessibilityRole="button"
                 >
                   <Text style={[
                     styles.mealTypeButtonText,
@@ -441,12 +445,16 @@ export default function BloodGlucoseTracker() {
         <TouchableOpacity 
           style={styles.cancelButton} 
           onPress={() => setShowInputForm(false)}
+          accessibilityLabel="Cancel adding glucose reading"
+          accessibilityRole="button"
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.saveButton} 
           onPress={saveReading}
+          accessibilityLabel="Save glucose reading"
+          accessibilityRole="button"
         >
           <Text style={styles.saveButtonText}>Save Reading</Text>
         </TouchableOpacity>
@@ -516,6 +524,8 @@ export default function BloodGlucoseTracker() {
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setShowInputForm(true)}
+          accessibilityLabel="Add new glucose reading"
+          accessibilityRole="button"
         >
           <Text style={styles.addButtonText}>+ Add Glucose Reading</Text>
         </TouchableOpacity>

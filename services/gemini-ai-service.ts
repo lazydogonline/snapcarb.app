@@ -59,35 +59,38 @@ export async function estimateCarbsFromImage(base64Image: string): Promise<MealN
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-  const prompt = `Analyze this food image and estimate the complete nutrition content. 
+  const prompt = `You are a NET CARB CALCULATOR. Analyze this food image and calculate ONLY net carbohydrates.
 
-CRITICAL NUTRITION ACCURACY:
-- Pure animal proteins (meat, fish, poultry, eggs) have ZERO carbs and ZERO fiber
-- Smoked salmon, grilled chicken, beef, etc. = 0g carbs, 0g fiber
-- Only add carbs if you see vegetables, fruits, grains, or processed foods
-- Be extremely accurate with zero-carb foods
+CRITICAL RULE: ALL ANIMAL PROTEINS HAVE ZERO CARBS
+- Salmon = 0g carbs
+- Chicken = 0g carbs  
+- Beef = 0g carbs
+- Eggs = 0g carbs
+- ANY meat/fish = 0g carbs
 
-Return ONLY valid JSON in this format:
+CALCULATE CARBS ONLY FROM:
+- Vegetables: 1-8g per serving
+- Fruits: 8-15g per serving
+- Grains: 15-30g per serving
+- Herbs/spices/lemon: <1g total
+
+EXAMPLE: Salmon with herbs = 0g (salmon) + 1g (herbs) = 1g total net carbs
+
+Return ONLY this JSON format (NO other fields):
 {
-  "total_carbs_g": 25.5,
-  "net_carbs_g": 20.0,
-  "fiber_g": 5.5,
-  "protein_g": 15.0,
-  "fat_g": 10.0,
-  "calories": 220,
+  "total_carbs_g": 1.0,
+  "net_carbs_g": 1.0,
+  "fiber_g": 0.0,
   "items": [
     {
-      "name": "Food item name",
-      "carbs_g": 12.3,
-      "net_carbs_g": 10.0,
-      "fiber_g": 2.3,
-      "protein_g": 8.0,
-      "fat_g": 5.0,
-      "portion_description": "1 cup",
-      "confidence": 0.85
+      "name": "Salmon",
+      "carbs_g": 0.0,
+      "net_carbs_g": 0.0,
+      "fiber_g": 0.0,
+      "portion_description": "1 serving"
     }
   ],
-  "notes": "Additional observations"
+  "notes": "Salmon has zero carbs"
 }`;
 
   const body = {
@@ -321,20 +324,37 @@ Make this recipe AMAZING - it should be something people want to cook and eat!`;
     // Parse the AI-generated recipe
     let recipe: SnapCarbRecipe;
     try {
-      // Fix common JSON issues before parsing
-      let cleanedJson = jsonText;
+      // Try parsing the raw JSON first
+      let cleanedJson = jsonText.trim();
       
-      // Fix unescaped quotes in titles and descriptions
-      cleanedJson = cleanedJson.replace(/"title":\s*"([^"]*)"([^"]*)"([^"]*)"/, '"title": "$1\\"$2\\"$3"');
-      cleanedJson = cleanedJson.replace(/"description":\s*"([^"]*)"([^"]*)"([^"]*)"/, '"description": "$1\\"$2\\"$3"');
+      // Remove any markdown formatting if present
+      cleanedJson = cleanedJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       
-      console.log('🔧 Cleaned JSON for parsing');
+      // Check if JSON appears to be truncated
+      if (!cleanedJson.endsWith('}')) {
+        console.log('⚠️ JSON appears truncated, attempting to fix...');
+        // Try to find the last complete object and close it
+        const lastCompleteBrace = cleanedJson.lastIndexOf('}');
+        if (lastCompleteBrace > 0) {
+          cleanedJson = cleanedJson.substring(0, lastCompleteBrace + 1);
+          console.log('🔧 Fixed truncated JSON');
+        }
+      }
+      
+      console.log('🔧 Attempting to parse JSON');
+      console.log('🔧 JSON length:', cleanedJson.length);
+      console.log('🔧 JSON starts with:', cleanedJson.substring(0, 50));
+      console.log('🔧 JSON ends with:', cleanedJson.substring(cleanedJson.length - 50));
       recipe = JSON.parse(cleanedJson) as SnapCarbRecipe;
+      console.log('✅ JSON parsed successfully');
     } catch (parseError) {
       console.error('❌ JSON Parse Error:', parseError);
-      console.error('❌ JSON text:', jsonText);
+      console.error('❌ JSON text length:', jsonText.length);
+      console.error('❌ First 200 chars:', jsonText.substring(0, 200));
+      console.error('❌ Last 200 chars:', jsonText.substring(jsonText.length - 200));
       
       // Try to extract essential data as fallback
+      console.log('🔄 Using fallback data extraction');
       const essentialData = extractEssentialRecipeData(jsonText);
       recipe = essentialData as SnapCarbRecipe;
     }

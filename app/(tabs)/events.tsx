@@ -48,9 +48,16 @@ export default function EventsScreen() {
     }
   };
 
-  const handleEventPress = (event: any) => {
-    // In a real app, this would open the event details or registration
-    console.log('Event pressed:', event.title);
+  const handleEventPress = async (event: any) => {
+    // For now, link to Inner Circle where people can register for events
+    try {
+      const supported = await Linking.canOpenURL('https://innercircle.drdavisinfinitehealth.com/landing/');
+      if (supported) {
+        await Linking.openURL('https://innercircle.drdavisinfinitehealth.com/landing/');
+      }
+    } catch (error) {
+      console.error('Error opening registration link:', error);
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -89,6 +96,8 @@ export default function EventsScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'videos' && styles.activeTab]}
           onPress={() => setActiveTab('videos')}
+          accessibilityLabel="Switch to video library tab"
+          accessibilityRole="button"
         >
           <Video size={20} color={activeTab === 'videos' ? '#8B5CF6' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'videos' && styles.activeTabText]}>Video Library</Text>
@@ -97,6 +106,8 @@ export default function EventsScreen() {
         <TouchableOpacity
           style={[styles.tab, activeTab === 'events' && styles.activeTab]}
           onPress={() => setActiveTab('events')}
+          accessibilityLabel="Switch to live events tab"
+          accessibilityRole="button"
         >
           <Calendar size={20} color={activeTab === 'events' ? '#8B5CF6' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Live Events</Text>
@@ -138,6 +149,8 @@ export default function EventsScreen() {
                 <TouchableOpacity
                   style={[styles.categoryHeader, { backgroundColor: categoryColors[category] || '#8B5CF6' }]}
                   onPress={() => toggleCategory(category)}
+                  accessibilityLabel={`${isExpanded ? 'Hide' : 'Show'} ${category} videos`}
+                  accessibilityRole="button"
                 >
                   <View style={styles.categoryHeaderContent}>
                     <Video size={24} color="#FFFFFF" />
@@ -156,6 +169,8 @@ export default function EventsScreen() {
                         key={video.id}
                         style={styles.videoCard}
                         onPress={() => handleVideoPress((video as any).videoUrl || '#')}
+                        accessibilityLabel={`Watch ${video.title} video`}
+                        accessibilityRole="button"
                       >
                         <View style={styles.videoInfo}>
                           <Text style={styles.videoTitle}>{video.title}</Text>
@@ -182,6 +197,8 @@ export default function EventsScreen() {
           <TouchableOpacity 
             style={styles.innerCircleCard}
             onPress={() => handleVideoPress('https://innercircle.drdavisinfinitehealth.com/landing/')}
+            accessibilityLabel="Join Dr Davis Inner Circle program"
+            accessibilityRole="button"
           >
             <LinearGradient
               colors={['#22c55e', '#16a34a', '#15803d']}
@@ -204,6 +221,8 @@ export default function EventsScreen() {
                 key={event.id}
                 style={styles.eventCard}
                 onPress={() => handleEventPress(event)}
+                accessibilityLabel={`Join ${event.title} event`}
+                accessibilityRole="button"
               >
                 <View style={styles.eventHeader}>
                   <View style={styles.eventIcon}>
@@ -239,7 +258,12 @@ export default function EventsScreen() {
                 </View>
 
                 <View style={styles.eventFooter}>
-                  <TouchableOpacity style={styles.joinButton}>
+                  <TouchableOpacity 
+                    style={styles.joinButton}
+                    onPress={() => handleEventPress(event)}
+                    accessibilityLabel={`Join ${event.title} event`}
+                    accessibilityRole="button"
+                  >
                     <Users color="#ffffff" size={16} />
                     <Text style={styles.joinButtonText}>Join Event</Text>
                   </TouchableOpacity>

@@ -49,6 +49,8 @@ export default function FoodSearch() {
     <TouchableOpacity
       style={[styles.foodItem, { borderLeftColor: getTrafficLightColor(item.traffic_light) }]}
       onPress={() => showFoodDetails(item)}
+      accessibilityLabel={`View details for ${item.name} (${item.traffic_light} traffic light)`}
+      accessibilityRole="button"
     >
       <View style={styles.foodHeader}>
         <Text style={styles.foodName} numberOfLines={2}>
@@ -125,6 +127,8 @@ export default function FoodSearch() {
           style={styles.searchButton}
           onPress={searchFoods}
           disabled={loading}
+          accessibilityLabel="Search for foods"
+          accessibilityRole="button"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -171,6 +175,8 @@ export default function FoodSearch() {
               <TouchableOpacity
                 onPress={() => setSelectedFood(null)}
                 style={styles.closeButton}
+                accessibilityLabel="Close food details"
+                accessibilityRole="button"
               >
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>

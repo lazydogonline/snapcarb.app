@@ -35,6 +35,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
           source={{ uri: recipe.imageUrl }}
           style={styles.recipeImage}
           resizeMode="cover"
+          accessibilityLabel={`Recipe image for ${recipe.title}`}
         />
       )}
       

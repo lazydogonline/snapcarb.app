@@ -116,6 +116,8 @@ const DrDavisAffiliates: React.FC = () => {
               style={[styles.categoryHeader, { backgroundColor: category.color }]}
               onPress={() => toggleCategory(index)}
               activeOpacity={0.8}
+              accessibilityLabel={`${isExpanded ? 'Collapse' : 'Expand'} ${category.name} category`}
+              accessibilityRole="button"
             >
               <View style={styles.categoryHeaderContent}>
                 <View style={styles.iconContainer}>
@@ -138,6 +140,8 @@ const DrDavisAffiliates: React.FC = () => {
                     style={styles.productCard}
                     onPress={() => handleProductPress(product.url, product.title)}
                     activeOpacity={0.7}
+                    accessibilityLabel={`View ${product.title} - ${product.isDrDavisProduct ? 'Dr. Davis product' : 'Recommended product'}`}
+                    accessibilityRole="button"
                   >
                     <View style={styles.productInfo}>
                       <Text style={styles.productTitle} numberOfLines={2}>
@@ -165,6 +169,8 @@ const DrDavisAffiliates: React.FC = () => {
         style={styles.innerCircleCard}
         onPress={() => handleProductPress('https://innercircle.drdavisinfinitehealth.com/landing/', 'Join Dr. Davis Inner Circle')}
         activeOpacity={0.8}
+        accessibilityLabel="Join Dr. Davis Inner Circle community"
+        accessibilityRole="button"
       >
         <Text style={styles.innerCircleTitle}>Join Dr. Davis Inner Circle</Text>
         <Text style={styles.innerCircleSubtitle}>

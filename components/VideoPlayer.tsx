@@ -41,11 +41,21 @@ export default function VideoPlayer({ visible, onClose, videoTitle, videoUrl }: 
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={styles.closeButton}
+              accessibilityLabel="Close video player"
+              accessibilityRole="button"
+            >
               <X size={24} color="white" />
             </TouchableOpacity>
             <Text style={styles.headerTitle} numberOfLines={2}>{videoTitle}</Text>
-            <TouchableOpacity onPress={handleExternalOpen} style={styles.externalButton}>
+            <TouchableOpacity 
+              onPress={handleExternalOpen} 
+              style={styles.externalButton}
+              accessibilityLabel="Open video in external app"
+              accessibilityRole="button"
+            >
               <ExternalLink size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -62,6 +72,8 @@ export default function VideoPlayer({ visible, onClose, videoTitle, videoUrl }: 
                 <TouchableOpacity 
                   style={styles.watchButton}
                   onPress={handleExternalOpen}
+                  accessibilityLabel="Watch video on YouTube"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.watchButtonText}>Watch on YouTube</Text>
                 </TouchableOpacity>
@@ -73,6 +85,8 @@ export default function VideoPlayer({ visible, onClose, videoTitle, videoUrl }: 
               <TouchableOpacity 
                 style={styles.watchButton}
                 onPress={handleExternalOpen}
+                accessibilityLabel="Open external video link"
+                accessibilityRole="button"
               >
                 <Text style={styles.watchButtonText}>Open External Link</Text>
               </TouchableOpacity>

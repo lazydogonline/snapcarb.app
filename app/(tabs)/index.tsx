@@ -15,8 +15,6 @@ export default function HomeScreen() {
   const currentDay = challenge.find(day => day.date === new Date().toDateString());
 
   const getChallengeStatusColor = () => {
-    console.log('Home screen - challenge data:', challenge.map(d => ({ day: d.day, date: d.date, completed: d.completed })));
-    
     const today = new Date();
     const todayString = today.toDateString();
     
@@ -25,13 +23,9 @@ export default function HomeScreen() {
       const isPast = dayDate < today;
       const isToday = day.date === todayString;
       
-      console.log(`Day ${day.day}: date=${day.date}, isPast=${isPast}, isToday=${isToday}, completed=${day.completed}`);
-      
       // Don't count today as "missed" - only count truly past days
       return isPast && !isToday && !day.completed;
     }).length;
-
-    console.log('Home screen - missedDays:', missedDays, 'completedDays:', completedDays);
     
     if (missedDays > 0) return '#ef4444'; // Red - bad (missed days)
     if (completedDays >= 7) return '#22c55e'; // Green - good (7+ days)

@@ -131,7 +131,7 @@ ${appDownloadLinks.web.website}
       });
       
       if (result.action === Share.sharedAction) {
-        console.log('Recipe shared successfully');
+        // Recipe shared successfully
       }
     } catch (error) {
       console.error('Error sharing recipe:', error);
@@ -323,6 +323,8 @@ ${appDownloadLinks.web.website}
         <TouchableOpacity 
           style={styles.favoriteButton} 
           onPress={() => handleToggleFavorite(recipe.id)}
+          accessibilityLabel="Add to favorites"
+          accessibilityRole="button"
         >
           <Heart 
             size={20} 
@@ -363,6 +365,8 @@ ${appDownloadLinks.web.website}
         <TouchableOpacity 
           style={styles.actionButton} 
           onPress={() => showShareOptions(recipe)}
+          accessibilityLabel="Share recipe"
+          accessibilityRole="button"
         >
           <Share2 size={16} color={colors.primary} />
           <Text style={styles.actionButtonText}>Share</Text>
@@ -370,6 +374,8 @@ ${appDownloadLinks.web.website}
         <TouchableOpacity 
           style={[styles.actionButton, styles.deleteButton]} 
           onPress={() => handleDeleteRecipe(recipe.id)}
+          accessibilityLabel="Delete recipe"
+          accessibilityRole="button"
         >
           <Trash2 size={16} color={colors.error} />
           <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
@@ -382,6 +388,8 @@ ${appDownloadLinks.web.website}
     <TouchableOpacity
       style={[styles.filterButton, activeFilter === filter && styles.activeFilterButton]}
       onPress={() => setActiveFilter(filter)}
+      accessibilityLabel={`Filter recipes by ${label}`}
+      accessibilityRole="button"
     >
       <Text style={[styles.filterButtonText, activeFilter === filter && styles.activeFilterButtonText]}>
         {label}
@@ -422,6 +430,8 @@ ${appDownloadLinks.web.website}
         <TouchableOpacity 
           style={styles.filterToggle} 
           onPress={() => setShowFilters(!showFilters)}
+          accessibilityLabel={showFilters ? "Hide recipe filters" : "Show recipe filters"}
+          accessibilityRole="button"
         >
           <Filter size={20} color={colors.primary} />
         </TouchableOpacity>

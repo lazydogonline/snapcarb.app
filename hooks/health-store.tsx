@@ -27,7 +27,6 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
 
   const loadData = useCallback(async () => {
     try {
-      console.log('loadData called - reloading from AsyncStorage...');
       const [storedMeals, storedSupplements, storedChallenge, storedHealthMetrics] = await Promise.all([
         AsyncStorage.getItem('meals'),
         AsyncStorage.getItem('supplements'),
@@ -51,7 +50,6 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
         }
       }
       if (storedChallenge) {
-        console.log('Loading fresh challenge data:', JSON.parse(storedChallenge).map((d: ChallengeDay) => ({ day: d.day, completed: d.completed })));
         setChallenge(JSON.parse(storedChallenge));
       }
       if (storedHealthMetrics) {
@@ -139,13 +137,9 @@ export const [HealthProvider, useHealth] = createContextHook(() => {
   }, [supplements]);
 
   const updateHealthMetrics = useCallback(async (updates: Partial<typeof healthMetrics>) => {
-    console.log('🔄 Updating health metrics:', updates);
-    console.log('🔄 Current metrics before update:', healthMetrics);
     const updatedMetrics = { ...healthMetrics, ...updates };
-    console.log('🔄 New metrics after update:', updatedMetrics);
     setHealthMetrics(updatedMetrics);
     await AsyncStorage.setItem('health-metrics', JSON.stringify(updatedMetrics));
-    console.log('✅ Health metrics saved to AsyncStorage');
   }, [healthMetrics]);
 
   return useMemo(() => ({

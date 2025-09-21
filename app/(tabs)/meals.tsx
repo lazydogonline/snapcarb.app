@@ -65,7 +65,6 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const handleTakePhoto = async () => {
-    console.log('📸 Take Photo button clicked!');
     Alert.alert(
       'Select Photo',
       'Choose how you want to add a photo:',
@@ -78,7 +77,6 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const openCamera = async () => {
-    console.log('📷 Opening camera...');
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -101,7 +99,6 @@ Download now: ${appDownloadLinks.getDownloadLink()}
   };
 
   const openImagePicker = async () => {
-    console.log('🖼️ Opening image picker...');
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -130,12 +127,8 @@ Download now: ${appDownloadLinks.getDownloadLink()}
     }
     
     if (isAnalyzing) {
-      console.log('⏳ Analysis already in progress, ignoring click');
       return;
     }
-    
-    console.log('🔍 Starting AI analysis...');
-    console.log('📸 Image path:', selectedImage);
     
     setIsAnalyzing(true);
     
@@ -146,20 +139,9 @@ Download now: ${appDownloadLinks.getDownloadLink()}
       // Convert image to base64 with detailed error handling
       let base64;
       try {
-        console.log('📁 Reading file from:', selectedImage);
-        console.log('📁 File URI type:', typeof selectedImage);
-        console.log('📁 File URI starts with file://', selectedImage.startsWith('file://'));
-        
-        // Skip file validation to avoid deprecated APIs - readAsStringAsync will fail if file doesn't exist
-        console.log('📋 Proceeding with base64 conversion (file validation skipped to avoid deprecated APIs)');
-        
         base64 = await FileSystem.readAsStringAsync(selectedImage, {
           encoding: 'base64',
         });
-        
-        console.log('📦 Base64 conversion successful!');
-        console.log('📦 Base64 length:', base64.length);
-        console.log('📦 Base64 starts with:', base64.substring(0, 50) + '...');
         
         // Validate base64 string
         if (!base64 || base64.length < 100) {
@@ -173,24 +155,18 @@ Download now: ${appDownloadLinks.getDownloadLink()}
         }
         
       } catch (base64Error: any) {
-        console.error('❌ Base64 conversion failed:', base64Error);
-        console.error('❌ Error details:', base64Error?.message || 'Unknown error');
-        console.error('❌ Error stack:', base64Error?.stack || 'No stack trace');
+        console.error('Base64 conversion failed:', base64Error);
         Alert.alert('Image Processing Error', `Failed to process image: ${base64Error?.message || 'Unknown error'}\n\nPlease try taking another photo.`);
         setIsAnalyzing(false);
         return;
       }
       
-      console.log('🤖 Calling Gemini AI...');
-      
       // Call real Gemini AI analysis with error handling
       let aiResult;
       try {
         aiResult = await analyzeMealForSnapCarb(base64);
-        console.log('✅ AI Result:', aiResult);
       } catch (aiError: any) {
-        console.error('❌ Gemini AI analysis failed:', aiError);
-        console.error('❌ AI Error details:', aiError?.message || 'Unknown AI error');
+        console.error('Gemini AI analysis failed:', aiError);
         
         if (aiError?.message?.includes('base64') || aiError?.message?.includes('Base64')) {
           Alert.alert('Image Format Error', 'There was an issue processing your image format. Please try taking another photo with better lighting.');
@@ -222,13 +198,9 @@ Download now: ${appDownloadLinks.getDownloadLink()}
       };
       
       setMealAnalysis(analysis);
-      console.log('✅ Analysis completed successfully!');
       
     } catch (error: any) {
-      console.error('❌ Top-level error in handleAnalyzePhoto:', error);
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error message:', error?.message || 'Unknown error');
-      console.error('❌ Error stack:', error?.stack || 'No stack trace');
+      console.error('Error in handleAnalyzePhoto:', error);
       
       const errorMessage = error?.message || error?.toString() || 'Unknown error';
       Alert.alert(
@@ -237,7 +209,6 @@ Download now: ${appDownloadLinks.getDownloadLink()}
       );
     } finally {
       setIsAnalyzing(false);
-      console.log('🔄 Analysis state reset');
     }
   };
 
@@ -246,10 +217,20 @@ Download now: ${appDownloadLinks.getDownloadLink()}
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={handleBackToSearch}
+              accessibilityLabel="Go back to recipe search"
+              accessibilityRole="button"
+            >
               <ArrowLeft size={32} color={colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShareApp}>
+            <TouchableOpacity 
+              style={styles.shareButton} 
+              onPress={handleShareApp}
+              accessibilityLabel="Share SnapCarb app"
+              accessibilityRole="button"
+            >
               <Share2 size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -272,7 +253,12 @@ Download now: ${appDownloadLinks.getDownloadLink()}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Utensils size={32} color={colors.primary} />
-            <TouchableOpacity style={styles.shareButton} onPress={handleShareApp}>
+            <TouchableOpacity 
+              style={styles.shareButton} 
+              onPress={handleShareApp}
+              accessibilityLabel="Share SnapCarb app"
+              accessibilityRole="button"
+            >
               <Share2 size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -293,15 +279,26 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           {/* Photo Preview with Retake/Analyze buttons */}
           {selectedImage && !mealAnalysis && (
             <View style={styles.photoPreview}>
-              <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+              <Image 
+                source={{ uri: selectedImage }} 
+                style={styles.previewImage} 
+                accessibilityLabel="Selected meal photo for analysis"
+              />
               <View style={styles.photoActions}>
-                <TouchableOpacity style={styles.retakeButton} onPress={handleTakePhoto}>
+                <TouchableOpacity 
+                  style={styles.retakeButton} 
+                  onPress={handleTakePhoto}
+                  accessibilityLabel="Take a new photo"
+                  accessibilityRole="button"
+                >
                   <Text style={styles.retakeButtonText}>Retake</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.analyzeActionButton, isAnalyzing && styles.analyzeActionButtonDisabled]} 
                   onPress={handleAnalyzePhoto}
                   disabled={isAnalyzing}
+                  accessibilityLabel="Analyze meal photo with AI"
+                  accessibilityRole="button"
                 >
                   <Text style={styles.analyzeActionButtonText}>
                     {isAnalyzing ? 'Analyzing...' : 'Analyze'}
@@ -313,7 +310,12 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           
           {/* Take Photo Button - Only show if no image selected */}
           {!selectedImage && (
-            <TouchableOpacity style={styles.analyzeButton} onPress={handleTakePhoto}>
+            <TouchableOpacity 
+              style={styles.analyzeButton} 
+              onPress={handleTakePhoto}
+              accessibilityLabel="Take a photo of your meal"
+              accessibilityRole="button"
+            >
               <Camera size={20} color={colors.background} />
               <Text style={styles.analyzeButtonText}>Take Photo</Text>
             </TouchableOpacity>
@@ -325,7 +327,12 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           <View style={styles.analysisResults}>
           <View style={styles.analysisHeader}>
             <Text style={styles.analysisTitle}>Meal Analysis Results</Text>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAnalysis}>
+            <TouchableOpacity 
+              style={styles.deleteButton} 
+              onPress={handleDeleteAnalysis}
+              accessibilityLabel="Delete meal analysis"
+              accessibilityRole="button"
+            >
               <Trash2 size={20} color={colors.error} />
             </TouchableOpacity>
           </View>
@@ -333,7 +340,11 @@ Download now: ${appDownloadLinks.getDownloadLink()}
           {/* Photo Display */}
           {selectedImage && (
             <View style={styles.photoContainer}>
-              <Image source={{ uri: selectedImage }} style={styles.mealPhoto} />
+              <Image 
+                source={{ uri: selectedImage }} 
+                style={styles.mealPhoto} 
+                accessibilityLabel="Analyzed meal photo"
+              />
             </View>
           )}
           
@@ -398,7 +409,12 @@ Download now: ${appDownloadLinks.getDownloadLink()}
         
         {/* My Saved Recipes Link */}
         <View style={styles.savedRecipesSection}>
-          <TouchableOpacity style={styles.savedRecipesButton} onPress={handleMyRecipes}>
+          <TouchableOpacity 
+            style={styles.savedRecipesButton} 
+            onPress={handleMyRecipes}
+            accessibilityLabel="View your saved recipe collection"
+            accessibilityRole="button"
+          >
             <BookOpen size={20} color={colors.primary} />
             <Text style={styles.savedRecipesButtonText}>View My Saved Recipes</Text>
             <ArrowLeft size={16} color={colors.primary} style={{ transform: [{ rotate: '180deg' }] }} />

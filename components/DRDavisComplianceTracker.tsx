@@ -260,7 +260,12 @@ export default function DRDavisComplianceTracker() {
             <Text style={styles.formTitle}>
               {editingRecord ? 'Edit Compliance Record' : 'Add Compliance Record'}
             </Text>
-            <TouchableOpacity onPress={closeForm} style={styles.closeButton}>
+            <TouchableOpacity 
+              onPress={closeForm} 
+              style={styles.closeButton}
+              accessibilityLabel="Close compliance form"
+              accessibilityRole="button"
+            >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -396,10 +401,20 @@ export default function DRDavisComplianceTracker() {
 
           {/* Form Buttons */}
           <View style={styles.formButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={closeForm}>
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={closeForm}
+              accessibilityLabel="Cancel adding compliance record"
+              accessibilityRole="button"
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={saveRecord}>
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={saveRecord}
+              accessibilityLabel={editingRecord ? "Update compliance record" : "Save compliance record"}
+              accessibilityRole="button"
+            >
               <Text style={styles.saveButtonText}>
                 {editingRecord ? 'Update' : 'Save'}
               </Text>
@@ -542,7 +557,12 @@ export default function DRDavisComplianceTracker() {
         </View>
 
         {/* Add Button */}
-        <TouchableOpacity style={styles.addButton} onPress={openAddForm}>
+        <TouchableOpacity 
+          style={styles.addButton} 
+          onPress={openAddForm}
+          accessibilityLabel="Add new compliance record"
+          accessibilityRole="button"
+        >
           <Plus size={20} color={colors.background} />
           <Text style={styles.addButtonText}>Add Compliance Record</Text>
         </TouchableOpacity>

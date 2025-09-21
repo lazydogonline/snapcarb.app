@@ -178,7 +178,12 @@ export default function IntegratedHealthTracker() {
             </View>
           )}
           {!drDavisProgress && (
-            <TouchableOpacity style={styles.startProgramButton} onPress={startDRDavisProgram}>
+            <TouchableOpacity 
+              style={styles.startProgramButton} 
+              onPress={startDRDavisProgram}
+              accessibilityLabel="Start DR Davis Program"
+              accessibilityRole="button"
+            >
               <Text style={styles.startProgramButtonText}>Start Program</Text>
             </TouchableOpacity>
           )}
@@ -271,7 +276,11 @@ export default function IntegratedHealthTracker() {
           <Text style={styles.innerCircleSubtitle}>
             Join the DR Davis Inner Circle for exclusive content, advanced tracking, and personalized coaching.
           </Text>
-          <TouchableOpacity style={styles.innerCircleButton}>
+          <TouchableOpacity 
+            style={styles.innerCircleButton}
+            accessibilityLabel="Join DR Davis Inner Circle"
+            accessibilityRole="button"
+          >
             <Text style={styles.innerCircleButtonText}>Join Inner Circle</Text>
           </TouchableOpacity>
         </View>
@@ -439,7 +448,12 @@ export default function IntegratedHealthTracker() {
           />
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={logDailyMetrics}>
+        <TouchableOpacity 
+          style={styles.saveButton} 
+          onPress={logDailyMetrics}
+          accessibilityLabel="Save Daily Metrics"
+          accessibilityRole="button"
+        >
           <Text style={styles.saveButtonText}>Save Daily Metrics</Text>
         </TouchableOpacity>
       </View>
@@ -570,8 +584,12 @@ export default function IntegratedHealthTracker() {
         )}
 
         {/* Add New Supplement */}
-        <TouchableOpacity style={styles.addButton}>
-                              <Plus size={20} color={colors.cardBackground} />
+        <TouchableOpacity 
+          style={styles.addButton}
+          accessibilityLabel="Add New Supplement"
+          accessibilityRole="button"
+        >
+          <Plus size={20} color={colors.cardBackground} />
           <Text style={styles.addButtonText}>Add Supplement</Text>
         </TouchableOpacity>
       </View>
@@ -630,6 +648,8 @@ export default function IntegratedHealthTracker() {
               key={tab.key}
               style={[styles.tabButton, activeTab === tab.key && styles.activeTabButton]}
               onPress={() => setActiveTab(tab.key as any)}
+              accessibilityLabel={`Switch to ${tab.label} tab`}
+              accessibilityRole="button"
             >
               <IconComponent size={20} color={activeTab === tab.key ? colors.white : colors.primary} />
               <Text style={[styles.tabButtonText, activeTab === tab.key && styles.activeTabButtonText]}>

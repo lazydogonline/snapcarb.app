@@ -15,6 +15,8 @@ export default function HealthScreen() {
     <TouchableOpacity
       style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
       onPress={() => setActiveTab(tab)}
+      accessibilityLabel={`Switch to ${label} tab`}
+      accessibilityRole="button"
     >
       {icon}
       <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>

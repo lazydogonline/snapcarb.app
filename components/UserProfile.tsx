@@ -75,14 +75,23 @@ export const UserProfile: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
             <ArrowLeft size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             {user.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+              <Image 
+                source={{ uri: user.avatar_url }} 
+                style={styles.avatar} 
+                accessibilityLabel="User profile avatar"
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <User size={40} color={colors.white} />
@@ -143,6 +152,8 @@ export const UserProfile: React.FC = () => {
                   ]}
                   onPress={() => handlePreferenceChange('theme', theme)}
                   disabled={isUpdating}
+                  accessibilityLabel={`Select ${theme} theme`}
+                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -197,7 +208,12 @@ export const UserProfile: React.FC = () => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <TouchableOpacity 
+          style={styles.signOutButton} 
+          onPress={handleSignOut}
+          accessibilityLabel="Sign out of account"
+          accessibilityRole="button"
+        >
           <LogOut size={20} color={colors.white} />
           <Text style={styles.signOutButtonText}>Sign Out</Text>
         </TouchableOpacity>

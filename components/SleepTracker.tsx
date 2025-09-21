@@ -225,6 +225,8 @@ export default function SleepTracker() {
         <TouchableOpacity 
           style={styles.addButton} 
           onPress={() => setIsAddingRecord(true)}
+          accessibilityLabel="Add new sleep record"
+          accessibilityRole="button"
         >
           <Ionicons name="add" size={24} color="white" />
           <Text style={styles.addButtonText}>Add Sleep Record</Text>
@@ -237,7 +239,12 @@ export default function SleepTracker() {
           <View style={styles.timeInputRow}>
             <View style={styles.timeInput}>
               <Text style={styles.inputLabel}>Bedtime</Text>
-              <TouchableOpacity style={styles.timeButton} onPress={() => setShowBedtimePicker(true)}>
+              <TouchableOpacity 
+                style={styles.timeButton} 
+                onPress={() => setShowBedtimePicker(true)}
+                accessibilityLabel="Set bedtime"
+                accessibilityRole="button"
+              >
                 <Text style={styles.timeButtonText}>
                   {currentRecord.bedtime || 'Set Time'}
                 </Text>
@@ -245,7 +252,12 @@ export default function SleepTracker() {
             </View>
             <View style={styles.timeInput}>
               <Text style={styles.inputLabel}>Wake Time</Text>
-              <TouchableOpacity style={styles.timeButton} onPress={() => setShowWakeTimePicker(true)}>
+              <TouchableOpacity 
+                style={styles.timeButton} 
+                onPress={() => setShowWakeTimePicker(true)}
+                accessibilityLabel="Set wake time"
+                accessibilityRole="button"
+              >
                 <Text style={styles.timeButtonText}>
                   {currentRecord.wakeTime || 'Set Time'}
                 </Text>
@@ -265,6 +277,8 @@ export default function SleepTracker() {
                     currentRecord.quality === quality && styles.qualityButtonActive
                   ]}
                   onPress={() => setCurrentRecord({...currentRecord, quality})}
+                  accessibilityLabel={`Select ${quality} sleep quality`}
+                  accessibilityRole="button"
                 >
                   <Text style={[
                     styles.qualityButtonText,
@@ -315,12 +329,16 @@ export default function SleepTracker() {
                 setIsAddingRecord(false);
                 setCurrentRecord({});
               }}
+              accessibilityLabel="Cancel adding sleep record"
+              accessibilityRole="button"
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.saveButton}
               onPress={addSleepRecord}
+              accessibilityLabel="Save sleep record"
+              accessibilityRole="button"
             >
               <Text style={styles.saveButtonText}>Save Record</Text>
             </TouchableOpacity>

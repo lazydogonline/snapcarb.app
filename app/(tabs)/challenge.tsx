@@ -19,15 +19,11 @@ export default function ChallengeScreen() {
   const progressPercentage = (completedDays / 10) * 100;
 
   const handleEditDay = (day: number) => {
-    console.log('handleEditDay called for day:', day);
-    console.log('canCompleteDay result:', canCompleteDay(day));
-    
     // For current day or already completed days, always allow editing
     const dayData = challenge.find(d => d.day === day);
     const status = getDayStatus(dayData);
     
     if (status === 'current' || status === 'completed') {
-      console.log('Allowing edit for day:', day);
       if (dayData) {
         setSymptoms(dayData.symptoms.join(', '));
         setNotes(dayData.notes);
@@ -71,7 +67,6 @@ export default function ChallengeScreen() {
   };
 
   const handleResetChallenge = () => {
-    console.log('Reset button clicked');
     Alert.alert(
       'Reset Challenge',
       'This will reset your entire challenge progress. You can start fresh from Day 1. Are you sure?',
@@ -81,7 +76,6 @@ export default function ChallengeScreen() {
           text: 'Reset', 
           style: 'destructive',
           onPress: () => {
-            console.log('User confirmed reset - calling resetChallengeData');
             resetChallengeData();
           }
         }
@@ -91,8 +85,6 @@ export default function ChallengeScreen() {
   };
 
   const resetChallengeData = async () => {
-    console.log('Starting challenge reset...');
-    
     try {
       // Clear any editing state first
       setEditingDay(null);
@@ -102,13 +94,10 @@ export default function ChallengeScreen() {
       // Create a fresh challenge array with all days reset  
       const resetChallenge = [];
       const today = new Date();
-      console.log('Reset: Today is', today.toDateString());
-      console.log('Reset: Today full date:', today);
       
       for (let dayNum = 1; dayNum <= 10; dayNum++) {
         const date = new Date(today);
         date.setDate(today.getDate() + dayNum - 1);
-        console.log(`Reset: Day ${dayNum} will be set to`, date.toDateString());
         
         resetChallenge.push({
           day: dayNum,
@@ -123,17 +112,11 @@ export default function ChallengeScreen() {
         });
       }
       
-      console.log('Saving fresh challenge data to AsyncStorage...');
-      
       // Save directly to AsyncStorage
       await AsyncStorage.setItem('challenge', JSON.stringify(resetChallenge));
       
-      console.log('Challenge reset complete, reloading data...');
-      
       // Reload data from AsyncStorage to refresh the UI
       await loadData();
-      
-      console.log('Data reloaded successfully!');
       Alert.alert('Challenge Reset', 'Your challenge has been reset successfully!');
       
     } catch (error: any) {
@@ -233,10 +216,11 @@ export default function ChallengeScreen() {
             <TouchableOpacity 
               style={styles.resetButtonSmall} 
               onPress={() => {
-                console.log('Direct reset button touched!');
                 resetChallengeData();
               }}
               activeOpacity={0.7}
+              accessibilityLabel="Reset challenge to start over"
+              accessibilityRole="button"
             >
               <Text style={styles.resetButtonSmallText}>Reset Now</Text>
             </TouchableOpacity>
@@ -272,9 +256,10 @@ export default function ChallengeScreen() {
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => {
-                        console.log('Edit button pressed for day:', day.day);
                         handleEditDay(day.day);
                       }}
+                      accessibilityLabel={`Edit day ${day.day} check-in`}
+                      accessibilityRole="button"
                     >
                       <Edit3 color="#6b7280" size={20} />
                     </TouchableOpacity>
@@ -358,6 +343,8 @@ export default function ChallengeScreen() {
                         setSymptoms('');
                         setNotes('');
                       }}
+                      accessibilityLabel="Cancel editing day check-in"
+                      accessibilityRole="button"
                     >
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
@@ -365,6 +352,8 @@ export default function ChallengeScreen() {
                     <TouchableOpacity 
                       style={styles.saveButton}
                       onPress={handleSaveDay}
+                      accessibilityLabel="Save day check-in"
+                      accessibilityRole="button"
                     >
                       <Text style={styles.saveButtonText}>Save Check-in</Text>
                     </TouchableOpacity>
@@ -391,7 +380,12 @@ export default function ChallengeScreen() {
             <Text style={styles.warningText}>
               You've missed one or more days. The challenge must be completed sequentially without skipping days.
             </Text>
-            <TouchableOpacity style={styles.resetButton} onPress={handleResetChallenge}>
+            <TouchableOpacity 
+              style={styles.resetButton} 
+              onPress={handleResetChallenge}
+              accessibilityLabel="Reset entire challenge"
+              accessibilityRole="button"
+            >
               <Text style={styles.resetButtonText}>Reset Challenge</Text>
             </TouchableOpacity>
           </View>
@@ -403,6 +397,8 @@ export default function ChallengeScreen() {
           <TouchableOpacity 
             style={styles.guidelinesHeader}
             onPress={() => setShowGuidelines(!showGuidelines)}
+            accessibilityLabel={showGuidelines ? "Hide challenge guidelines" : "Show challenge guidelines"}
+            accessibilityRole="button"
           >
             <Text style={styles.sectionTitle}>Challenge Guidelines</Text>
             {showGuidelines ? (
@@ -456,6 +452,8 @@ export default function ChallengeScreen() {
                   Alert.alert('Error', 'Unable to open link. Please visit: https://innercircle.drdavisinfinitehealth.com/landing/');
                 }
               }}
+              accessibilityLabel="Learn more about Dr Davis program (opens website)"
+              accessibilityRole="button"
             >
               <Text style={styles.guidelineLinkText}>Learn More About DR Davis Program</Text>
             </TouchableOpacity>

@@ -26,16 +26,11 @@ export default function RecipeSearch({ initialQuery = '' }: RecipeSearchProps) {
     setRecipe(null);
 
     try {
-      console.log(`🔍 Searching for recipe: "${query.trim()}" (attempt ${retryCount + 1})`);
       const result = await RecipeService.searchRecipe({ query: query.trim() });
       setRecipe(result);
-      console.log('✅ Recipe generated successfully');
     } catch (error) {
-      console.error('❌ Recipe search error:', error);
-      
       // If it's an API key error and we haven't retried, try once more
       if (error instanceof Error && error.message.includes('API key') && retryCount === 0) {
-        console.log('🔄 Retrying due to API key error...');
         setTimeout(() => handleSearch(1), 2000);
         return;
       }
@@ -480,6 +475,8 @@ Download: ${appDownloadLinks.web.downloadPage}`;
             style={[styles.searchButton, loading && styles.searchButtonDisabled]}
             onPress={() => handleSearch()}
             disabled={loading}
+            accessibilityLabel="Search for SnapCarb recipe"
+            accessibilityRole="button"
           >
             <Search size={20} color={colors.background} />
             <Text style={styles.searchButtonText}>
@@ -509,6 +506,8 @@ Download: ${appDownloadLinks.web.downloadPage}`;
             style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
             onPress={() => handleSaveRecipe(recipe)}
             disabled={saving}
+            accessibilityLabel="Save recipe to your collection"
+            accessibilityRole="button"
           >
             <BookOpen size={20} color="#ffffff" />
             <Text style={styles.saveButtonText}>
@@ -573,6 +572,8 @@ Download: ${appDownloadLinks.web.downloadPage}`;
               style={[styles.primaryActionButton, saving && styles.primaryActionButtonDisabled]} 
               onPress={() => handleSaveRecipe(recipe)}
               disabled={saving}
+              accessibilityLabel="Save recipe to your collection"
+              accessibilityRole="button"
             >
               <BookOpen size={20} color={colors.background} />
               <Text style={styles.primaryActionButtonText}>
@@ -581,15 +582,30 @@ Download: ${appDownloadLinks.web.downloadPage}`;
             </TouchableOpacity>
             
             <View style={styles.secondaryActions}>
-              <TouchableOpacity style={styles.secondaryActionButton} onPress={() => handleShareRecipe(recipe)}>
+              <TouchableOpacity 
+                style={styles.secondaryActionButton} 
+                onPress={() => handleShareRecipe(recipe)}
+                accessibilityLabel="Share recipe"
+                accessibilityRole="button"
+              >
                 <Share2 size={18} color={colors.primary} />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.secondaryActionButton} onPress={handleQuickCopy}>
+              <TouchableOpacity 
+                style={styles.secondaryActionButton} 
+                onPress={handleQuickCopy}
+                accessibilityLabel="Copy recipe text"
+                accessibilityRole="button"
+              >
                 <Copy size={18} color={colors.primary} />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.secondaryActionButton} onPress={handlePrint}>
+              <TouchableOpacity 
+                style={styles.secondaryActionButton} 
+                onPress={handlePrint}
+                accessibilityLabel="Print recipe"
+                accessibilityRole="button"
+              >
                 <Printer size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>

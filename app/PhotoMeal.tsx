@@ -23,8 +23,13 @@ export default function PhotoMeal() {
   // Request camera permissions on component mount
   React.useEffect(() => {
     (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      try {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
+      } catch (error) {
+        console.log('Camera permission request failed:', error);
+        setHasPermission(false);
+      }
     })();
   }, []);
 
@@ -34,10 +39,15 @@ export default function PhotoMeal() {
       return;
     }
     if (hasPermission === false) {
-      Alert.alert('No access to camera');
+      Alert.alert('Camera not available', 'Camera access is not available. Please use Photo Library instead.');
       return;
     }
-    setShowCamera(true);
+    try {
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Alert.alert('Camera Error', 'Unable to open camera. Please try Photo Library instead.');
+    }
   };
 
   const capturePhoto = async () => {
@@ -78,7 +88,7 @@ export default function PhotoMeal() {
       'Choose how to get your photo',
       [
         { text: 'Camera', onPress: takePhoto },
-        { text: 'Gallery', onPress: pickImage },
+        { text: 'Photo Library', onPress: pickImage },
         { text: 'Cancel', style: 'cancel' }
       ]
     );
@@ -119,10 +129,19 @@ export default function PhotoMeal() {
   if (photo) {
     return (
       <View style={styles.photoContainer}>
-        <Image source={{ uri: photo }} style={styles.photo} />
+        <Image 
+          source={{ uri: photo }} 
+          style={styles.photo} 
+          accessibilityLabel="Selected meal photo for analysis"
+        />
         
         <View style={styles.photoActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={clearPhoto}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={clearPhoto}
+            accessibilityLabel="Retake photo"
+            accessibilityRole="button"
+          >
             <Text style={styles.actionButtonText}>Retake</Text>
           </TouchableOpacity>
           
@@ -130,6 +149,8 @@ export default function PhotoMeal() {
             style={[styles.actionButton, styles.analyzeButton]} 
             onPress={analyzePhoto}
             disabled={analyzing}
+            accessibilityLabel="Analyze meal photo with AI"
+            accessibilityRole="button"
           >
             {analyzing ? (
               <ActivityIndicator size={20} color="white" />
@@ -201,6 +222,8 @@ export default function PhotoMeal() {
             <TouchableOpacity
               style={styles.cameraButton}
               onPress={() => setShowCamera(false)}
+              accessibilityLabel="Cancel camera"
+              accessibilityRole="button"
             >
               <Text style={styles.cameraButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -208,6 +231,8 @@ export default function PhotoMeal() {
             <TouchableOpacity
               style={styles.captureButton}
               onPress={capturePhoto}
+              accessibilityLabel="Capture photo"
+              accessibilityRole="button"
             >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
@@ -220,7 +245,7 @@ export default function PhotoMeal() {
   }
 
   return (
-    <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+    <TouchableOpacity style={styles.uploadButton} onPress={showPhotoOptions}>
       <Text style={styles.uploadButtonText}>�� Take Photo of Meal/Ingredients</Text>
       <Text style={styles.uploadButtonSubtext}>Get instant SnapCarb analysis</Text>
     </TouchableOpacity>

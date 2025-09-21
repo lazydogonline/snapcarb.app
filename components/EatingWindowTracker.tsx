@@ -353,14 +353,24 @@ export default function EatingWindowTracker() {
       {/* Action Buttons */}
       <View style={styles.actionsContainer}>
         {!eatingWindow && (
-          <TouchableOpacity style={styles.startButton} onPress={startEatingWindow}>
+          <TouchableOpacity 
+            style={styles.startButton} 
+            onPress={startEatingWindow}
+            accessibilityLabel="Start eating window tracking"
+            accessibilityRole="button"
+          >
             <Play size={24} color="white" />
             <Text style={styles.startButtonText}>Start Eating Window</Text>
           </TouchableOpacity>
         )}
         
         {isTracking && (
-          <TouchableOpacity style={styles.endButton} onPress={endEatingWindow}>
+          <TouchableOpacity 
+            style={styles.endButton} 
+            onPress={endEatingWindow}
+            accessibilityLabel="End eating window tracking"
+            accessibilityRole="button"
+          >
             <Square size={24} color="white" />
             <Text style={styles.endButtonText}>End Eating Window</Text>
           </TouchableOpacity>

@@ -105,7 +105,11 @@ export default function AnalyticsDashboard() {
       </View>
       <Text style={styles.insightMessage}>{insight.message}</Text>
       {insight.actionable && insight.action && (
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          accessibilityLabel={`Take action: ${insight.action}`}
+          accessibilityRole="button"
+        >
           <Text style={styles.actionButtonText}>{insight.action}</Text>
         </TouchableOpacity>
       )}
@@ -157,6 +161,8 @@ export default function AnalyticsDashboard() {
               selectedPeriod === period && styles.periodButtonActive
             ]}
             onPress={() => setSelectedPeriod(period)}
+            accessibilityLabel={`Select ${period} time period`}
+            accessibilityRole="button"
           >
             <Text style={[
               styles.periodButtonText,

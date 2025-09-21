@@ -330,12 +330,16 @@ export default function BodyMeasurementTracker() {
         <TouchableOpacity 
           style={styles.cancelButton} 
           onPress={() => setShowInputForm(false)}
+          accessibilityLabel="Cancel adding body measurement"
+          accessibilityRole="button"
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.saveButton} 
           onPress={saveMeasurement}
+          accessibilityLabel="Save body measurement"
+          accessibilityRole="button"
         >
           <Text style={styles.saveButtonText}>Save Measurement</Text>
         </TouchableOpacity>
@@ -406,6 +410,8 @@ export default function BodyMeasurementTracker() {
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setShowInputForm(true)}
+          accessibilityLabel="Add new body measurement"
+          accessibilityRole="button"
         >
           <Text style={styles.addButtonText}>+ Add New Measurement</Text>
         </TouchableOpacity>

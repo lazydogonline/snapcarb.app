@@ -414,8 +414,8 @@ export const disallowedFoods = [
   'artificial colors', 'artificial flavors', 'msg', 'monosodium glutamate', 'nitrates',
   'nitrites', 'sulfites', 'carrageenan', 'xanthan gum', 'guar gum', 'locust bean gum',
   
-  // Legumes (during initial phase)
-  'beans', 'lentils', 'chickpeas', 'peas', 'soy', 'soybeans', 'tofu', 'tempeh',
+  // Legumes (during initial phase) - but NOT green beans (which are allowed)
+  'black beans', 'kidney beans', 'navy beans', 'pinto beans', 'lima beans', 'lentils', 'chickpeas', 'peas', 'soy', 'soybeans', 'tofu', 'tempeh',
   
   // High-starch vegetables
   'potatoes', 'sweet potatoes', 'yams', 'taro', 'cassava', 'plantains',

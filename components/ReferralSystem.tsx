@@ -287,6 +287,8 @@ ${referralLink}
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'invite' && styles.activeTabButton]}
           onPress={() => setActiveTab('invite')}
+          accessibilityLabel="Switch to invite tab"
+          accessibilityRole="button"
         >
           <Share2 size={20} color={activeTab === 'invite' ? colors.background : colors.textSecondary} />
           <Text style={[styles.tabButtonText, activeTab === 'invite' && styles.activeTabButtonText]}>
@@ -297,6 +299,8 @@ ${referralLink}
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'tracking' && styles.activeTabButton]}
           onPress={() => setActiveTab('tracking')}
+          accessibilityLabel="Switch to tracking tab"
+          accessibilityRole="button"
         >
           <Users size={20} color={activeTab === 'tracking' ? colors.background : colors.textSecondary} />
           <Text style={[styles.tabButtonText, activeTab === 'tracking' && styles.activeTabButtonText]}>
@@ -307,6 +311,8 @@ ${referralLink}
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'rewards' && styles.activeTabButton]}
           onPress={() => setActiveTab('rewards')}
+          accessibilityLabel="Switch to rewards tab"
+          accessibilityRole="button"
         >
           <Gift size={20} color={activeTab === 'rewards' ? colors.background : colors.textSecondary} />
           <Text style={[styles.tabButtonText, activeTab === 'rewards' && styles.activeTabButtonText]}>
@@ -334,7 +340,12 @@ ${referralLink}
               onChangeText={setReferralEmail}
               keyboardType="email-address"
             />
-            <TouchableOpacity style={styles.sendInviteButton} onPress={handleSendInvite}>
+            <TouchableOpacity 
+              style={styles.sendInviteButton} 
+              onPress={handleSendInvite}
+              accessibilityLabel="Send referral invite"
+              accessibilityRole="button"
+            >
               <Mail size={20} color={colors.background} />
               <Text style={styles.sendInviteButtonText}>Send Invite</Text>
             </TouchableOpacity>
@@ -347,7 +358,12 @@ ${referralLink}
               <Text style={styles.referralLink} numberOfLines={1}>
                 {getReferralLink()}
               </Text>
-              <TouchableOpacity style={styles.copyButton} onPress={handleCopyReferralLink}>
+              <TouchableOpacity 
+                style={styles.copyButton} 
+                onPress={handleCopyReferralLink}
+                accessibilityLabel="Copy referral link"
+                accessibilityRole="button"
+              >
                 <Copy size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
@@ -360,6 +376,8 @@ ${referralLink}
               <TouchableOpacity 
                 style={[styles.socialButton, { backgroundColor: '#E4405F' }]}
                 onPress={() => handleShareReferral('Instagram')}
+                accessibilityLabel="Share referral on Instagram"
+                accessibilityRole="button"
               >
                 <Instagram size={24} color={colors.background} />
                 <Text style={styles.socialButtonText}>Instagram</Text>
@@ -368,6 +386,8 @@ ${referralLink}
               <TouchableOpacity 
                 style={[styles.socialButton, { backgroundColor: '#1DA1F2' }]}
                 onPress={() => handleShareReferral('Twitter')}
+                accessibilityLabel="Share referral on Twitter"
+                accessibilityRole="button"
               >
                 <Twitter size={24} color={colors.background} />
                 <Text style={styles.socialButtonText}>Twitter</Text>

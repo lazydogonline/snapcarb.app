@@ -175,7 +175,12 @@ export default function DRDavisHealthTracker() {
             }
           </Text>
           {!drDavisProgress && (
-            <TouchableOpacity style={styles.startProgramButton} onPress={startDRDavisProgram}>
+            <TouchableOpacity 
+              style={styles.startProgramButton} 
+              onPress={startDRDavisProgram}
+              accessibilityLabel="Start Dr. Davis health program"
+              accessibilityRole="button"
+            >
               <Text style={styles.startProgramButtonText}>Start Program</Text>
             </TouchableOpacity>
           )}
@@ -367,7 +372,12 @@ export default function DRDavisHealthTracker() {
           />
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={logDailyMetrics}>
+        <TouchableOpacity 
+          style={styles.saveButton} 
+          onPress={logDailyMetrics}
+          accessibilityLabel="Save daily health metrics"
+          accessibilityRole="button"
+        >
           <Text style={styles.saveButtonText}>Save Daily Metrics</Text>
         </TouchableOpacity>
       </View>
@@ -470,7 +480,11 @@ export default function DRDavisHealthTracker() {
         )}
 
         {/* Add New Supplement */}
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          accessibilityLabel="Add new supplement"
+          accessibilityRole="button"
+        >
           <Plus size={20} color={colors.white} />
           <Text style={styles.addButtonText}>Add Supplement</Text>
         </TouchableOpacity>
@@ -488,26 +502,46 @@ export default function DRDavisHealthTracker() {
 
         {/* Goal Categories */}
         <View style={styles.goalCategories}>
-          <TouchableOpacity style={styles.goalCategory}>
+          <TouchableOpacity 
+            style={styles.goalCategory}
+            accessibilityLabel="Set blood glucose goal"
+            accessibilityRole="button"
+          >
             <Target size={24} color={colors.primary} />
             <Text style={styles.goalCategoryText}>Blood Glucose</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.goalCategory}>
+          <TouchableOpacity 
+            style={styles.goalCategory}
+            accessibilityLabel="Set weight goal"
+            accessibilityRole="button"
+          >
             <Scale size={24} color={colors.primary} />
             <Text style={styles.goalCategoryText}>Weight</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.goalCategory}>
+          <TouchableOpacity 
+            style={styles.goalCategory}
+            accessibilityLabel="Set blood pressure goal"
+            accessibilityRole="button"
+          >
             <Heart size={24} color={colors.primary} />
             <Text style={styles.goalCategoryText}>Blood Pressure</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.goalCategory}>
+          <TouchableOpacity 
+            style={styles.goalCategory}
+            accessibilityLabel="Set fasting goal"
+            accessibilityRole="button"
+          >
             <Clock size={24} color={colors.primary} />
             <Text style={styles.goalCategoryText}>Fasting</Text>
           </TouchableOpacity>
         </View>
 
         {/* Add New Goal */}
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          accessibilityLabel="Create new health goal"
+          accessibilityRole="button"
+        >
           <Plus size={20} color={colors.white} />
           <Text style={styles.addButtonText}>Create New Goal</Text>
         </TouchableOpacity>
@@ -564,6 +598,8 @@ export default function DRDavisHealthTracker() {
               key={tab.key}
               style={[styles.tabButton, activeTab === tab.key && styles.activeTabButton]}
               onPress={() => setActiveTab(tab.key as any)}
+              accessibilityLabel={`Switch to ${tab.label} tab`}
+              accessibilityRole="button"
             >
               <IconComponent size={20} color={activeTab === tab.key ? colors.white : colors.primary} />
               <Text style={[styles.tabButtonText, activeTab === tab.key && styles.activeTabButtonText]}>
@@ -636,6 +672,8 @@ function MealForm({ onSubmit }: { onSubmit: (meal: MealData) => void }) {
                 mealData.meal_type === type && styles.activeMealTypeButton
               ]}
               onPress={() => setMealData(prev => ({ ...prev, meal_type: type }))}
+              accessibilityLabel={`Select ${type} meal type`}
+              accessibilityRole="button"
             >
               <Text style={[
                 styles.mealTypeButtonText,
@@ -696,21 +734,35 @@ function MealForm({ onSubmit }: { onSubmit: (meal: MealData) => void }) {
             onChangeText={setFoodItem}
             placeholder="Add a food item..."
           />
-          <TouchableOpacity style={styles.addFoodButton} onPress={addFoodItem}>
+          <TouchableOpacity 
+            style={styles.addFoodButton} 
+            onPress={addFoodItem}
+            accessibilityLabel="Add food item to meal"
+            accessibilityRole="button"
+          >
             <Plus size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
         {mealData.food_items.map((item, index) => (
           <View key={index} style={styles.foodItem}>
             <Text style={styles.foodItemText}>{item}</Text>
-            <TouchableOpacity onPress={() => removeFoodItem(index)}>
+            <TouchableOpacity 
+              onPress={() => removeFoodItem(index)}
+              accessibilityLabel={`Remove ${item} from meal`}
+              accessibilityRole="button"
+            >
               <Text style={styles.removeFoodButton}>✕</Text>
             </TouchableOpacity>
           </View>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+      <TouchableOpacity 
+        style={styles.saveButton} 
+        onPress={handleSubmit}
+        accessibilityLabel="Save meal log"
+        accessibilityRole="button"
+      >
         <Text style={styles.saveButtonText}>Log Meal</Text>
       </TouchableOpacity>
     </View>
