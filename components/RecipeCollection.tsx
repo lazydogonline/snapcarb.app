@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, RefreshControl, Share, Linking, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   BookOpen, 
   Search, 
   Filter, 
-  Plus, 
   Share2, 
   Trash2, 
   Heart,
   Clock,
   Users,
   TrendingUp,
-  Star
+  Star,
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Instagram
 } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import { SnapCarbRecipe } from '../services/gemini-ai-service';
-import { SupabaseRecipeService } from '../services/supabase-service';
+import { RecipeService } from '../services/recipe-service';
 import appDownloadLinks from '../config/app-links';
 
 const { width } = Dimensions.get('window');
@@ -45,9 +48,9 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      // Load recipes from Supabase
-      const userRecipes = await SupabaseRecipeService.getUserRecipes(userId);
-      setRecipes(userRecipes);
+      // Load recipes from AsyncStorage
+      const userRecipes = await RecipeService.getUserRecipes();
+      setRecipes((userRecipes || []) as SnapCarbRecipe[]);
     } catch (error) {
       console.error('Error loading recipes:', error);
       // For now, show some sample recipes
@@ -78,10 +81,12 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
     // Apply category filter
     switch (activeFilter) {
       case 'favorites':
-        filtered = filtered.filter(recipe => recipe.isFavorite);
+        // Since isFavorite doesn't exist, show all recipes for now
+        filtered = filtered;
         break;
       case 'recent':
-        filtered = filtered.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        // Since createdAt doesn't exist, sort by title alphabetically
+        filtered = filtered.sort((a, b) => a.title.localeCompare(b.title));
         break;
       case 'low-carb':
         filtered = filtered.filter(recipe => recipe.netCarbs <= 10);
@@ -93,26 +98,123 @@ export default function RecipeCollection({ userId }: RecipeCollectionProps) {
     setFilteredRecipes(filtered);
   };
 
-  const handleShareRecipe = (recipe: SnapCarbRecipe) => {
-    const message = `🍎 SnapCarb Recipe: ${recipe.title}
+  const handleShareRecipe = async (recipe: SnapCarbRecipe) => {
+    const message = `🔥 Amazing SnapCarb Recipe from the SnapCarb App!
 
-📝 ${recipe.description}
-⏱️ Prep: ${recipe.prepTime}min | Cook: ${recipe.cookTime}min
-👥 Serves: ${recipe.servings}
-📊 Net Carbs: ${recipe.netCarbs}g per serving
+${recipe.title}
+${recipe.description}
 
-🥗 Ingredients:
+🤖 AI-Generated • Only ${recipe.netCarbs}g Net Carbs!
+⏱️ Prep: ${recipe.prepTime}min | Cook: ${recipe.cookTime}min | Serves: ${recipe.servings}
+
+Ingredients:
 ${recipe.ingredients.map(ing => `• ${ing.amount} ${ing.name}`).join('\n')}
 
-👨‍🍳 Instructions:
+Instructions:
 ${recipe.instructions.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
-${appDownloadLinks.getDownloadMessage()}`;
+📊 Nutrition (per serving):
+• ${recipe.netCarbs}g Net Carbs
+• ${recipe.nutrition.protein}g Protein
+• ${recipe.nutrition.fat}g Fat
+• ${recipe.nutrition.fiber}g Fiber
 
-    Alert.alert('Share Recipe', message, [
-      { text: 'Copy', onPress: () => Alert.alert('Copied!', 'Recipe copied to clipboard') },
-      { text: 'Cancel', style: 'cancel' }
-    ]);
+📱 Get the SnapCarb App for instant AI recipe generation:
+${appDownloadLinks.web.website}
+
+#SnapCarb #LowCarb #KetoRecipes #HealthyEating #AIChef`;
+
+    try {
+      const result = await Share.share({
+        message: message,
+        title: `SnapCarb Recipe: ${recipe.title}`,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        // Recipe shared successfully
+      }
+    } catch (error) {
+      console.error('Error sharing recipe:', error);
+      Alert.alert('Error', 'Failed to share recipe');
+    }
+  };
+
+  const handleSocialShare = (recipe: SnapCarbRecipe, platform: string) => {
+    const message = `Check out this amazing SnapCarb recipe: ${recipe.title}! 🍎\n\n${recipe.description}\n\nNet Carbs: ${recipe.netCarbs}g per serving\n\n${appDownloadLinks.getDownloadMessage()}`;
+    
+    let url = '';
+    let shareText = '';
+    
+    switch (platform) {
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appDownloadLinks.web.website)}&quote=${encodeURIComponent(message)}`;
+        break;
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(appDownloadLinks.web.website)}`;
+        break;
+      case 'whatsapp':
+        url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+        break;
+      case 'instagram':
+        // Instagram doesn't support direct URL sharing, so we'll copy to clipboard
+        Alert.alert('Instagram Share', 'Recipe details copied to clipboard! Paste them in your Instagram story or post.', [
+          { text: 'OK', onPress: () => Clipboard.setString(message) }
+        ]);
+        return;
+      case 'pinterest':
+        url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(appDownloadLinks.web.website)}&description=${encodeURIComponent(message)}`;
+        break;
+      case 'telegram':
+        url = `https://t.me/share/url?url=${encodeURIComponent(appDownloadLinks.web.website)}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(appDownloadLinks.web.website)}&summary=${encodeURIComponent(message)}`;
+        break;
+      case 'reddit':
+        url = `https://reddit.com/submit?url=${encodeURIComponent(appDownloadLinks.web.website)}&title=${encodeURIComponent(recipe.title)}&text=${encodeURIComponent(message)}`;
+        break;
+      case 'discord':
+        // Discord doesn't support direct URL sharing, copy to clipboard
+        Alert.alert('Discord Share', 'Recipe details copied to clipboard! Paste them in your Discord chat.', [
+          { text: 'OK', onPress: () => Clipboard.setString(message) }
+        ]);
+        return;
+      case 'email':
+        url = `mailto:?subject=${encodeURIComponent(`Amazing SnapCarb Recipe: ${recipe.title}`)}&body=${encodeURIComponent(message)}`;
+        break;
+      case 'sms':
+        url = `sms:?body=${encodeURIComponent(message)}`;
+        break;
+      default:
+        return;
+    }
+    
+    Linking.openURL(url).catch(err => {
+      console.error('Error opening social media app:', err);
+      Alert.alert('Error', 'Could not open the app. Please try sharing manually.');
+    });
+  };
+
+  const showShareOptions = (recipe: SnapCarbRecipe) => {
+    Alert.alert(
+      'Share Recipe',
+      'Choose how you want to share this recipe:',
+      [
+        { text: 'Native Share', onPress: () => handleShareRecipe(recipe) },
+        { text: 'Facebook', onPress: () => handleSocialShare(recipe, 'facebook') },
+        { text: 'X (Twitter)', onPress: () => handleSocialShare(recipe, 'twitter') },
+        { text: 'WhatsApp', onPress: () => handleSocialShare(recipe, 'whatsapp') },
+        { text: 'Instagram', onPress: () => handleSocialShare(recipe, 'instagram') },
+        { text: 'Pinterest', onPress: () => handleSocialShare(recipe, 'pinterest') },
+        { text: 'Telegram', onPress: () => handleSocialShare(recipe, 'telegram') },
+        { text: 'LinkedIn', onPress: () => handleSocialShare(recipe, 'linkedin') },
+        { text: 'Reddit', onPress: () => handleSocialShare(recipe, 'reddit') },
+        { text: 'Discord', onPress: () => handleSocialShare(recipe, 'discord') },
+        { text: 'Email', onPress: () => handleSocialShare(recipe, 'email') },
+        { text: 'SMS', onPress: () => handleSocialShare(recipe, 'sms') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const handleDeleteRecipe = async (recipeId: string) => {
@@ -126,7 +228,7 @@ ${appDownloadLinks.getDownloadMessage()}`;
           style: 'destructive',
           onPress: async () => {
             try {
-              await SupabaseRecipeService.deleteRecipe(recipeId);
+              await RecipeService.deleteRecipe(recipeId);
               setRecipes(recipes.filter(r => r.id !== recipeId));
               Alert.alert('Success', 'Recipe deleted successfully');
             } catch (error) {
@@ -141,15 +243,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
 
   const handleToggleFavorite = async (recipeId: string) => {
     try {
-      const updatedRecipes = recipes.map(recipe =>
-        recipe.id === recipeId 
-          ? { ...recipe, isFavorite: !recipe.isFavorite }
-          : recipe
-      );
-      setRecipes(updatedRecipes);
-      
-      // Update in Supabase
-      await SupabaseRecipeService.updateRecipe(recipeId, { isFavorite: !recipes.find(r => r.id === recipeId)?.isFavorite });
+      // Since isFavorite doesn't exist on SnapCarbRecipe, we'll just show a message
+      Alert.alert('Feature Coming Soon', 'Favorites functionality will be added in a future update!');
     } catch (error) {
       console.error('Error updating favorite:', error);
     }
@@ -177,11 +272,13 @@ ${appDownloadLinks.getDownloadMessage()}`;
         'Steam cauliflower rice and broccoli',
         'Serve beef over vegetables'
       ],
-      nutrition: { calories: 350, protein: 35, fat: 20, fiber: 5, netCarbs: 8 },
+      nutrition: { protein: 35, fat: 20, fiber: 5, netCarbs: 8 },
       tags: ['low-carb', 'high-protein', 'snapcarb-approved'],
       source: 'SnapCarb Chef Collection',
-      isFavorite: true,
-      createdAt: new Date().toISOString()
+      coolFacts: {
+        omega_3: 'Grass-fed beef contains beneficial omega-3 fatty acids',
+        cla: 'Rich in CLA (conjugated linoleic acid) which may aid in weight management'
+      }
     },
     {
       id: '2',
@@ -204,11 +301,13 @@ ${appDownloadLinks.getDownloadMessage()}`;
         'Season salmon and cook for 12-15 minutes',
         'Serve with lemon butter sauce'
       ],
-      nutrition: { calories: 420, protein: 38, fat: 28, fiber: 6, netCarbs: 6 },
+      nutrition: { protein: 38, fat: 28, fiber: 6, netCarbs: 6 },
       tags: ['omega-3', 'anti-inflammatory', 'snapcarb-approved'],
       source: 'SnapCarb Chef Collection',
-      isFavorite: false,
-      createdAt: new Date().toISOString()
+      coolFacts: {
+        omega_3: 'Wild-caught salmon is rich in omega-3 fatty acids',
+        anti_inflammatory: 'Brussels sprouts contain powerful anti-inflammatory compounds'
+      }
     }
   ];
 
@@ -224,11 +323,13 @@ ${appDownloadLinks.getDownloadMessage()}`;
         <TouchableOpacity 
           style={styles.favoriteButton} 
           onPress={() => handleToggleFavorite(recipe.id)}
+          accessibilityLabel="Add to favorites"
+          accessibilityRole="button"
         >
           <Heart 
             size={20} 
-            color={recipe.isFavorite ? colors.error : colors.textSecondary} 
-            fill={recipe.isFavorite ? colors.error : 'transparent'}
+            color={colors.textSecondary} 
+            fill='transparent'
           />
         </TouchableOpacity>
       </View>
@@ -263,7 +364,9 @@ ${appDownloadLinks.getDownloadMessage()}`;
       <View style={styles.recipeActions}>
         <TouchableOpacity 
           style={styles.actionButton} 
-          onPress={() => handleShareRecipe(recipe)}
+          onPress={() => showShareOptions(recipe)}
+          accessibilityLabel="Share recipe"
+          accessibilityRole="button"
         >
           <Share2 size={16} color={colors.primary} />
           <Text style={styles.actionButtonText}>Share</Text>
@@ -271,6 +374,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
         <TouchableOpacity 
           style={[styles.actionButton, styles.deleteButton]} 
           onPress={() => handleDeleteRecipe(recipe.id)}
+          accessibilityLabel="Delete recipe"
+          accessibilityRole="button"
         >
           <Trash2 size={16} color={colors.error} />
           <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
@@ -283,6 +388,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
     <TouchableOpacity
       style={[styles.filterButton, activeFilter === filter && styles.activeFilterButton]}
       onPress={() => setActiveFilter(filter)}
+      accessibilityLabel={`Filter recipes by ${label}`}
+      accessibilityRole="button"
     >
       <Text style={[styles.filterButtonText, activeFilter === filter && styles.activeFilterButtonText]}>
         {label}
@@ -323,6 +430,8 @@ ${appDownloadLinks.getDownloadMessage()}`;
         <TouchableOpacity 
           style={styles.filterToggle} 
           onPress={() => setShowFilters(!showFilters)}
+          accessibilityLabel={showFilters ? "Hide recipe filters" : "Show recipe filters"}
+          accessibilityRole="button"
         >
           <Filter size={20} color={colors.primary} />
         </TouchableOpacity>
@@ -348,26 +457,30 @@ ${appDownloadLinks.getDownloadMessage()}`;
       >
         {filteredRecipes.length === 0 ? (
           <View style={styles.emptyState}>
-            <BookOpen size={64} color={colors.textSecondary} />
-            <Text style={styles.emptyStateTitle}>No recipes found</Text>
-            <Text style={styles.emptyStateText}>
-              {searchQuery ? 'Try adjusting your search' : 'Start building your collection by saving recipes'}
-            </Text>
-            <TouchableOpacity style={styles.addFirstButton}>
-              <Plus size={20} color={colors.background} />
-              <Text style={styles.addFirstButtonText}>Add Your First Recipe</Text>
-            </TouchableOpacity>
+            {searchQuery ? (
+              <>
+                <Search size={64} color={colors.textSecondary} />
+                <Text style={styles.emptyStateTitle}>No recipes match your search</Text>
+                <Text style={styles.emptyStateText}>
+                  Try a different search term or browse all your saved recipes
+                </Text>
+              </>
+            ) : (
+              <>
+                <BookOpen size={64} color={colors.primary} />
+                <Text style={styles.emptyStateTitle}>No Saved Recipes Yet</Text>
+                <Text style={styles.emptyStateText}>
+                  When you find recipes you love in the Meals tab, save them here for quick access
+                </Text>
+              </>
+            )}
           </View>
         ) : (
           filteredRecipes.map(renderRecipeCard)
         )}
       </ScrollView>
 
-      {/* Add Recipe Button */}
-      <TouchableOpacity style={styles.addButton}>
-        <Plus size={24} color={colors.background} />
-        <Text style={styles.addButtonText}>Add New Recipe</Text>
-      </TouchableOpacity>
+      {/* Removed non-functional Add Recipe button - keeping it clean and focused */}
     </View>
   );
 }
@@ -379,9 +492,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    paddingBottom: 30,
+    padding: 15,
+    paddingTop: 20,
+    paddingBottom: 15,
   },
   headerTop: {
     flexDirection: 'row',
@@ -389,7 +502,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.background,
     marginLeft: 12,
@@ -401,7 +514,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 15,
     gap: 12,
   },
   searchContainer: {
@@ -450,6 +563,7 @@ const styles = StyleSheet.create({
   recipesList: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 100, // Space for bottom navigation
   },
   recipeCard: {
     backgroundColor: colors.cardBackground,
@@ -540,7 +654,8 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 20,
+    paddingVertical: 60,
   },
   emptyStateTitle: {
     fontSize: 20,
@@ -553,36 +668,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 8,
   },
-  addFirstButton: {
-    flexDirection: 'row',
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyStateActions: {
     alignItems: 'center',
+  },
+  discoverButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 25,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  addFirstButtonText: {
+  discoverButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.background,
-    marginLeft: 8,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.background,
-    marginLeft: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -596,6 +709,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -33,8 +33,10 @@ export default function ProgressCard({ title, value, subtitle, color, icon }: Pr
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -43,30 +45,33 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
   icon: {
-    marginRight: 8,
+    marginBottom: 4,
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
-    opacity: 0.9,
+    textAlign: 'center',
   },
   value: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 4,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 12,
     color: '#ffffff',
     opacity: 0.8,
+    textAlign: 'center',
   },
 });

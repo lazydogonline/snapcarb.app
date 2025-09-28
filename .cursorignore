@@ -1,0 +1,50 @@
+# Cursor IDE ignore file - improves performance by ignoring heavy files
+
+# Large data files
+*.csv
+valid_food_nutrients.csv
+USDA FOOD IMPORT/
+
+# Node modules
+node_modules/
+
+# Build outputs
+.expo/
+dist/
+build/
+
+# Large documentation files
+*.md
+!README.md
+
+# Database files
+*.sql
+supabase/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Large media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.mov
+
+# Package lock (very large)
+package-lock.json
+
+# CSV chunks (very large)
+csv-chunks/
+
+# Git
+.git/
+
+# Environment files
+.env*
+!.env.example
+
+

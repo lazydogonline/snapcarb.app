@@ -223,12 +223,16 @@ export default function AIMealLogger() {
             <TouchableOpacity
               style={styles.cameraButton}
               onPress={() => setShowCamera(false)}
+              accessibilityLabel="Cancel camera"
+              accessibilityRole="button"
             >
               <Text style={styles.cameraButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.captureButton}
               onPress={takePicture}
+              accessibilityLabel="Capture photo"
+              accessibilityRole="button"
             >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
@@ -255,10 +259,16 @@ export default function AIMealLogger() {
         
         {photoUri ? (
           <View style={styles.photoContainer}>
-            <Image source={{ uri: photoUri }} style={styles.photo} />
+            <Image 
+              source={{ uri: photoUri }} 
+              style={styles.photo} 
+              accessibilityLabel="Selected meal photo for AI analysis"
+            />
             <TouchableOpacity
               style={styles.retakeButton}
               onPress={() => setPhotoUri(null)}
+              accessibilityLabel="Retake photo"
+              accessibilityRole="button"
             >
               <Text style={styles.retakeButtonText}>Retake</Text>
             </TouchableOpacity>
@@ -269,6 +279,8 @@ export default function AIMealLogger() {
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={() => setShowCamera(true)}
+                accessibilityLabel="Take photo with camera"
+                accessibilityRole="button"
               >
                 <CameraIcon size={24} color="#22c55e" />
                 <Text style={styles.photoButtonText}>Take Photo</Text>
@@ -277,6 +289,8 @@ export default function AIMealLogger() {
               <TouchableOpacity
                 style={styles.photoButton}
                 onPress={pickImage}
+                accessibilityLabel="Choose photo from gallery"
+                accessibilityRole="button"
               >
                 <ImageIcon size={24} color="#22c55e" />
                 <Text style={styles.photoButtonText}>Choose Photo</Text>
@@ -405,6 +419,8 @@ export default function AIMealLogger() {
             <TouchableOpacity
               style={styles.addIngredientButton}
               onPress={addIngredient}
+              accessibilityLabel="Add new ingredient"
+              accessibilityRole="button"
             >
               <Text style={styles.addIngredientButtonText}>+ Add</Text>
             </TouchableOpacity>
@@ -422,6 +438,8 @@ export default function AIMealLogger() {
               <TouchableOpacity
                 style={styles.removeIngredientButton}
                 onPress={() => removeIngredient(index)}
+                accessibilityLabel={`Remove ingredient ${ingredient}`}
+                accessibilityRole="button"
               >
                 <Text style={styles.removeIngredientButtonText}>×</Text>
               </TouchableOpacity>
@@ -433,6 +451,8 @@ export default function AIMealLogger() {
         <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmit}
+          accessibilityLabel="Submit meal for AI analysis"
+          accessibilityRole="button"
         >
           <CheckCircle size={20} color="#ffffff" />
           <Text style={styles.submitButtonText}>Log Meal</Text>

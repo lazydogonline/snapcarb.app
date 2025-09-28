@@ -8,208 +8,173 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
-// Configuration
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+// Initialize Supabase client
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase environment variables');
-  console.error('Make sure EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY are set');
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function testDatabaseSchema() {
-  console.log('🔍 Testing Database Schema...\n');
-  
+async function testDatabase() {
+  console.log('🔍 Testing database connection and data...\n');
+
   try {
     // Test 1: Check if tables exist and have data
-    console.log('📊 Table Data Counts:');
+    console.log('📊 Checking table data...');
     
-    const { count: nutrientsCount } = await supabase
-      .from('nutrients')
-      .select('*', { count: 'exact', head: true });
+    const { data: foodCount, error: foodError } = await supabase
+      .from('food')
+      .select('fdc_id', { count: 'exact' });
     
-    const { count: foodsCount } = await supabase
-      .from('foods')
-      .select('*', { count: 'exact', head: true });
+    if (foodError) {
+      console.error('❌ Error checking food table:', foodError);
+    } else {
+      console.log(`✅ Food table: ${foodCount?.length || 0} records`);
+    }
+
+    const { data: nutrientCount, error: nutrientError } = await supabase
+      .from('nutrient')
+      .select('id', { count: 'exact' });
     
-    const { count: brandedFoodsCount } = await supabase
-      .from('branded_foods')
-      .select('*', { count: 'exact', head: true });
+    if (nutrientError) {
+      console.error('❌ Error checking nutrient table:', nutrientError);
+    } else {
+      console.log(`✅ Nutrient table: ${nutrientCount?.length || 0} records`);
+    }
+
+    const { data: foodNutrientCount, error: foodNutrientError } = await supabase
+      .from('food_nutrient')
+      .select('fdc_id', { count: 'exact' });
     
-    const { count: foodNutrientsCount } = await supabase
-      .from('food_nutrients')
-      .select('*', { count: 'exact', head: true });
+    if (foodNutrientError) {
+      console.error('❌ Error checking food_nutrient table:', foodNutrientError);
+    } else {
+      console.log(`✅ Food_nutrient table: ${foodNutrientCount?.length || 0} records`);
+    }
+
+    // Test 2: Try a simple search
+    console.log('\n🔍 Testing food search...');
     
-    console.log(`   Nutrients: ${nutrientsCount || 0}`);
-    console.log(`   Foods: ${foodsCount || 0}`);
-    console.log(`   Branded Foods: ${brandedFoodsCount || 0}`);
-    console.log(`   Food Nutrients: ${foodNutrientsCount || 0}\n`);
-    
-    // Test 2: Check if views exist and work
-    console.log('🔬 Testing Views:');
-    
-    // Test v_food_macros_100g view
-    const { data: macros100g, error: error100g } = await supabase
-      .from('v_food_macros_100g')
-      .select('*')
+    const { data: searchResults, error: searchError } = await supabase
+      .from('food')
+      .select('fdc_id, description')
+      .ilike('description', '%steak%')
       .limit(5);
-    
-    if (error100g) {
-      console.log('   ❌ v_food_macros_100g view error:', error100g.message);
+
+    if (searchError) {
+      console.error('❌ Error searching foods:', searchError);
     } else {
-      console.log(`   ✅ v_food_macros_100g view working (${macros100g?.length || 0} rows)`);
-    }
-    
-    // Test v_food_macros_serving view
-    const { data: macrosServing, error: errorServing } = await supabase
-      .from('v_food_macros_serving')
-      .select('*')
-      .limit(5);
-    
-    if (errorServing) {
-      console.log('   ❌ v_food_macros_serving view error:', errorServing.message);
-    } else {
-      console.log(`   ✅ v_food_macros_serving view working (${macrosServing?.length || 0} rows)`);
-    }
-    
-    // Test v_recipe_totals view
-    const { data: recipeTotals, error: errorRecipe } = await supabase
-      .from('v_recipe_totals')
-      .select('*')
-      .limit(5);
-    
-    if (errorRecipe) {
-      console.log('   ❌ v_recipe_totals view error:', errorRecipe.message);
-    } else {
-      console.log(`   ✅ v_recipe_totals view working (${recipeTotals?.length || 0} rows)\n`);
-    }
-    
-    // Test 3: Test helper functions
-    console.log('⚡ Testing Helper Functions:');
-    
-    // Test search_foods function
-    const { data: searchResults, error: errorSearch } = await supabase
-      .rpc('search_foods', { search_term: 'apple' });
-    
-    if (errorSearch) {
-      console.log('   ❌ search_foods function error:', errorSearch.message);
-    } else {
-      console.log(`   ✅ search_foods function working (${searchResults?.length || 0} results for 'apple')`);
-    }
-    
-    // Test get_food_macros_100g function (if we have food data)
-    if (foodsCount && foodNutrientsCount) {
-      const { data: macros, error: errorMacros } = await supabase
-        .rpc('get_food_macros_100g', { food_fdc_id: 1 });
-      
-      if (errorMacros) {
-        console.log('   ❌ get_food_macros_100g function error:', errorMacros.message);
-      } else {
-        console.log(`   ✅ get_food_macros_100g function working`);
+      console.log(`✅ Search test: Found ${searchResults?.length || 0} steak results`);
+      if (searchResults && searchResults.length > 0) {
+        searchResults.forEach((food, index) => {
+          console.log(`   ${index + 1}. ${food.description} (ID: ${food.fdc_id})`);
+        });
       }
     }
-    
-    // Test 4: Test barcode lookup (if we have branded foods)
-    if (brandedFoodsCount) {
-      console.log('\n🏷️  Testing Barcode Lookup:');
+
+    // Test 3: Check if nutrition data exists
+    if (searchResults && searchResults.length > 0) {
+      console.log('\n🥗 Testing nutrition lookup...');
       
-      // Get a sample barcode from branded foods
-      const { data: sampleBranded, error: errorSample } = await supabase
-        .from('branded_foods')
-        .select('gtin_upc')
-        .not('gtin_upc', 'is', null)
-        .limit(1);
-      
-      if (sampleBranded && sampleBranded.length > 0) {
-        const testBarcode = sampleBranded[0].gtin_upc;
-        console.log(`   Testing with barcode: ${testBarcode}`);
-        
-        const { data: barcodeResult, error: errorBarcode } = await supabase
-          .rpc('lookup_food_by_barcode', { barcode: testBarcode });
-        
-        if (errorBarcode) {
-          console.log('   ❌ barcode lookup error:', errorBarcode.message);
-        } else if (barcodeResult && barcodeResult.length > 0) {
-          console.log(`   ✅ Barcode lookup working! Found: ${barcodeResult[0].description}`);
-        } else {
-          console.log('   ⚠️  Barcode lookup working but no results found');
+      const firstFood = searchResults[0];
+      const { data: nutritionData, error: nutritionError } = await supabase
+        .from('food_nutrient')
+        .select(`
+          nutrient_id,
+          amount,
+          nutrients!inner(name, unit_name)
+        `)
+        .eq('fdc_id', firstFood.fdc_id)
+        .limit(5);
+
+      if (nutritionError) {
+        console.error('❌ Error getting nutrition:', nutritionError);
+      } else {
+        console.log(`✅ Nutrition test: Found ${nutritionData?.length || 0} nutrition records for ${firstFood.description}`);
+        if (nutritionData && nutritionData.length > 0) {
+          nutritionData.forEach((item: any, index) => {
+            const nutrientName = item.nutrients?.name || 'Unknown';
+            const unitName = item.nutrients?.unit_name || 'Unknown';
+            console.log(`   ${index + 1}. ${nutrientName}: ${item.amount} ${unitName}`);
+          });
         }
-      } else {
-        console.log('   ⚠️  No barcodes found in branded foods to test');
       }
     }
-    
-    // Test 5: Create a test recipe
-    console.log('\n👨‍🍳 Testing Recipe System:');
-    
+
+    // Test nutrition lookup
+    console.log('\n🧪 Testing nutrition lookup...');
     try {
-      // Create a test recipe
-      const { data: recipe, error: errorRecipeCreate } = await supabase
-        .from('recipes')
-        .insert({
-          name: 'Test Recipe - SnapCarb',
-          servings: 2
-        })
-        .select()
-        .single();
+      const { data: nutrients, error: nutrientsError } = await supabase
+        .from('nutrient')
+        .select('id, name, unit_name')
+        .limit(10);
       
-      if (errorRecipeCreate) {
-        console.log('   ❌ Recipe creation error:', errorRecipeCreate.message);
+      if (nutrientsError) {
+        console.error('❌ Error getting nutrients:', nutrientsError);
       } else {
-        console.log(`   ✅ Recipe created: ${recipe.name} (ID: ${recipe.id})`);
-        
-        // Add test ingredients if we have food data
-        if (foodsCount && foodNutrientsCount) {
-          const { data: ingredients, error: errorIngredients } = await supabase
-            .from('recipe_ingredients')
-            .insert([
-              { recipe_id: recipe.id, fdc_id: 1, grams: 100 },
-              { recipe_id: recipe.id, fdc_id: 2, grams: 50 }
-            ])
-            .select();
-          
-          if (errorIngredients) {
-            console.log('   ❌ Recipe ingredients error:', errorIngredients.message);
-          } else {
-            console.log(`   ✅ Recipe ingredients added (${ingredients?.length || 0} ingredients)`);
-            
-            // Test recipe totals view
-            const { data: totals, error: errorTotals } = await supabase
-              .from('v_recipe_totals')
-              .select('*')
-              .eq('recipe_id', recipe.id)
-              .single();
-            
-            if (errorTotals) {
-              console.log('   ❌ Recipe totals error:', errorTotals.message);
-            } else {
-              console.log(`   ✅ Recipe totals calculated: ${totals.total_grams}g total, ${totals.total_kcal} kcal`);
-            }
-          }
-        }
-        
-        // Clean up test recipe
-        await supabase.from('recipes').delete().eq('id', recipe.id);
-        console.log('   🧹 Test recipe cleaned up');
+        console.log('✅ Nutrients found:', nutrients);
+      }
+
+      // Test food_nutrient join
+      const { data: foodNutrients, error: foodNutrientsError } = await supabase
+        .from('food_nutrient')
+        .select(`
+          nutrient_id,
+          amount,
+          nutrients!inner(name, unit_name)
+        `)
+        .eq('fdc_id', 1100001) // Test with a specific FDC ID
+        .limit(5);
+      
+      if (foodNutrientsError) {
+        console.error('❌ Error getting food nutrients:', foodNutrientsError);
+      } else {
+        console.log('✅ Food nutrients found:', foodNutrients);
+      }
+
+      // Find specific nutrient IDs we need
+      console.log('\n🔍 Looking for specific nutrients...');
+      const { data: energyNutrients, error: energyError } = await supabase
+        .from('nutrient')
+        .select('id, name, unit_name')
+        .or('name.ilike.%energy%,name.ilike.%protein%,name.ilike.%fat%,name.ilike.%carbohydrate%,name.ilike.%fiber%,name.ilike.%sugar%,name.ilike.%sodium%');
+      
+      if (energyError) {
+        console.error('❌ Error getting energy nutrients:', energyError);
+      } else {
+        console.log('✅ Energy-related nutrients found:', energyNutrients);
       }
     } catch (error) {
-      console.log('   ❌ Recipe system test failed:', error);
+      console.error('❌ Error in nutrition test:', error);
     }
-    
-    console.log('\n🎉 Database testing completed!');
-    
+
+    console.log('\n📋 Summary:');
+    if ((foodCount?.length || 0) === 0) {
+      console.log('❌ Food table is empty - you need to run the USDA import script');
+      console.log('💡 Run: npm run ts-node scripts/import-essential-usda-data.ts');
+    } else if ((nutrientCount?.length || 0) === 0) {
+      console.log('❌ Nutrient table is empty - you need to run the USDA import script');
+      console.log('💡 Run: npm run ts-node scripts/import-essential-usda-data.ts');
+    } else if ((foodNutrientCount?.length || 0) === 0) {
+      console.log('❌ Food_nutrient table is empty - you need to run the USDA import script');
+      console.log('💡 Run: npm run ts-node scripts/import-essential-usda-data.ts');
+    } else {
+      console.log('✅ All tables have data - the issue might be elsewhere');
+    }
+
   } catch (error) {
-    console.error('❌ Database test failed:', error);
+    console.error('❌ Test failed:', error);
   }
 }
 
 // Run the test
-if (require.main === module) {
-  testDatabaseSchema().catch(console.error);
-}
+testDatabase();
+
 
 

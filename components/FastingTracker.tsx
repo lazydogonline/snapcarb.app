@@ -206,7 +206,12 @@ const FastingTracker: React.FC = () => {
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.startButton} onPress={startFasting}>
+            <TouchableOpacity 
+              style={styles.startButton} 
+              onPress={startFasting}
+              accessibilityLabel="Start fasting session"
+              accessibilityRole="button"
+            >
               <Play color="#ffffff" size={24} />
               <Text style={styles.startButtonText}>Start Fasting</Text>
             </TouchableOpacity>
@@ -291,18 +296,33 @@ const FastingTracker: React.FC = () => {
 
             <View style={styles.actionsContainer}>
               {isRunning ? (
-                <TouchableOpacity style={styles.pauseButton} onPress={pauseFasting}>
+                <TouchableOpacity 
+                  style={styles.pauseButton} 
+                  onPress={pauseFasting}
+                  accessibilityLabel="Pause fasting session"
+                  accessibilityRole="button"
+                >
                   <Pause color="#ffffff" size={20} />
                   <Text style={styles.pauseButtonText}>Pause</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity style={styles.resumeButton} onPress={resumeFasting}>
+                <TouchableOpacity 
+                  style={styles.resumeButton} 
+                  onPress={resumeFasting}
+                  accessibilityLabel="Resume fasting session"
+                  accessibilityRole="button"
+                >
                   <Play color="#ffffff" size={20} />
                   <Text style={styles.resumeButtonText}>Resume</Text>
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity style={styles.endButton} onPress={endFasting}>
+              <TouchableOpacity 
+                style={styles.endButton} 
+                onPress={endFasting}
+                accessibilityLabel="End fasting session"
+                accessibilityRole="button"
+              >
                 <RotateCcw color="#ffffff" size={20} />
                 <Text style={styles.endButtonText}>End Fast</Text>
               </TouchableOpacity>
@@ -323,7 +343,12 @@ const FastingTracker: React.FC = () => {
               Ended: {fastingSession.endTime?.toLocaleTimeString()}
             </Text>
             
-            <TouchableOpacity style={styles.resetButton} onPress={resetFasting}>
+            <TouchableOpacity 
+              style={styles.resetButton} 
+              onPress={resetFasting}
+              accessibilityLabel="Start new fasting session"
+              accessibilityRole="button"
+            >
               <RotateCcw color="#3b82f6" size={20} />
               <Text style={styles.resetButtonText}>Start New Session</Text>
             </TouchableOpacity>

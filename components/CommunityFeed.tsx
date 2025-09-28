@@ -232,17 +232,27 @@ const CommunityFeed: React.FC = () => {
         <TouchableOpacity 
           style={styles.actionButton} 
           onPress={() => likePost(item.id)}
+          accessibilityLabel={`Like post by ${item.user}`}
+          accessibilityRole="button"
         >
           <Heart color="#6b7280" size={18} />
           <Text style={styles.actionText}>{item.likes}</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          accessibilityLabel={`Comment on post by ${item.user}`}
+          accessibilityRole="button"
+        >
           <MessageCircle color="#6b7280" size={18} />
           <Text style={styles.actionText}>{item.comments}</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          accessibilityLabel={`Share post by ${item.user}`}
+          accessibilityRole="button"
+        >
           <Share2 color="#6b7280" size={18} />
           <Text style={styles.actionText}>Share</Text>
         </TouchableOpacity>
@@ -281,6 +291,8 @@ const CommunityFeed: React.FC = () => {
                   selectedType === type && { backgroundColor: getTypeColor(type) }
                 ]}
                 onPress={() => setSelectedType(type)}
+                accessibilityLabel={`Select ${type} post type`}
+                accessibilityRole="button"
               >
                 <Text style={[
                   styles.typeOptionText,
@@ -304,6 +316,8 @@ const CommunityFeed: React.FC = () => {
           <TouchableOpacity 
             style={styles.postButton} 
             onPress={submitPost}
+            accessibilityLabel="Submit new community post"
+            accessibilityRole="button"
           >
             <Send color="#ffffff" size={18} />
             <Text style={styles.postButtonText}>Post</Text>

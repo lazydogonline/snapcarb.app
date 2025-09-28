@@ -62,7 +62,7 @@ export interface USDABrandedFood {
 
 export class USDADataImportService {
   private static readonly API_BASE = 'https://api.nal.usda.gov/fdc/v1';
-  private static readonly API_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY || 'DEMO_KEY';
+  private static readonly API_KEY = process.env.USDA_API_KEY || process.env.EXPO_PUBLIC_USDA_API_KEY || 'DEMO_KEY';
   
   /**
    * Download and import USDA Foundation Foods
@@ -434,5 +434,17 @@ export class USDADataImportService {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 

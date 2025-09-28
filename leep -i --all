@@ -1,0 +1,5 @@
+[33m70400d6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/health-ui-cleanup[m[33m, [m[1;31morigin/feature/health-ui-cleanup[m[33m)[m Major UI/UX cleanup: Remove fake progress tracking, fix sleep tracker, clean health dashboard, eliminate misleading features
+[33m002a7a3[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m  Complete SnapCarb app with full USDA database - 13K+ food nutrients, 47K+ portions, 28 categories, affiliate system, and comprehensive specification
+[33mf765bd4[m Complete SnapCarb app integration: Health tracking, recipe system, Supabase backend, and comprehensive features
+[33mc281b88[m New version from Rork
+[33m9282d47[m Sync snapshot from Rork

@@ -23,6 +23,9 @@ export interface HealthMetrics {
   // Digestive Health
   digestiveHealth: DigestiveHealth;
   
+  // DR Davis Program Markers
+  drDavisMarkers: DRDavisMarkers;
+  
   // Progress Tracking
   progress: ProgressMetrics;
 }
@@ -260,6 +263,69 @@ export interface DigestiveHealth {
   updatedAt: string;
 }
 
+export interface DRDavisMarkers {
+  id: string;
+  userId: string;
+  date: string;
+  
+  // Blood Glucose & Insulin (Most Critical)
+  fastingGlucose: number; // mg/dL - Target: 70-90
+  postprandialGlucose: number; // mg/dL - Target: ≤100, ideally no rise from FBG
+  hba1c: number; // % - Target: 4.0-5.0
+  fastingInsulin: number; // mIU/L - Target: 0-4
+  
+  // Body Composition
+  weight: number; // kg
+  waist: number; // cm
+  bmi: number; // Target: 18.5-24.5
+  
+  // Blood Pressure
+  systolicBP: number; // mmHg - Target: 90-115
+  diastolicBP: number; // mmHg - Target: 50-70
+  
+  // Advanced Lipid Panel (NMR Lipoprofile) - DR Davis Priority
+  triglycerides: number; // mg/dL - Target: ≤60 (correlates with VLDL)
+  ldlParticleNumber: number; // nmol/L - Target: <1000, Optimal: <700
+  smallLdlParticles: number; // nmol/L - Target: <200 (Most Important!)
+  ldlParticleSize: number; // nm - Target: >20.5 (larger is better)
+  hdlParticleNumber: number; // μmol/L - Target: >30
+  vldlParticleNumber: number; // nmol/L - Target: <75
+  
+  // HbA1c - DR Davis Key Marker (3-month glucose control)
+  hba1c: number; // % - Target: <5.7%, Optimal: <5.4%
+  // Note: Test every 90 days to see damaged cell renewal cycle
+  
+  // Basic Cholesterol (less important to DR Davis)
+  totalCholesterol?: number; // mg/dL - he doesn't focus on this
+  hdlCholesterol?: number; // mg/dL - particle number more important
+  ldlCholesterol?: number; // mg/dL - particle number/size more important
+  
+  // Thyroid Function
+  tsh: number; // mIU/L - Target: 0.2-2.0
+  bodyTemperature: number; // °C - Target: 97.3°F (36.3°C) or higher
+  
+  // Micronutrients
+  vitaminD: number; // ng/mL - Target: 60-70
+  magnesium: number; // mg/dL - Target: upper half of lab range
+  
+  // Inflammation
+  crp: number; // mg/L - Target: 0-1.0
+  homocysteine: number; // µmol/L - Target: 0-10
+  
+  // Supplements Tracking
+  vitaminDTaken: boolean;
+  fishOilTaken: boolean;
+  magnesiumTaken: boolean;
+  iodineTaken: boolean;
+  probioticTaken: boolean;
+  
+  // Prebiotic Fiber
+  prebioticFiberGrams: number; // Target: 20g/day
+  
+  notes: string;
+  updatedAt: string;
+}
+
 export interface ProgressMetrics {
   id: string;
   userId: string;
@@ -300,9 +366,11 @@ export type MetricCategory =
   | 'bodyMeasurements' 
   | 'vitalSigns' 
   | 'fastingMetrics' 
+  | 'drDavisMarkers'
   | 'lifestyleMetrics' 
   | 'digestiveHealth' 
-  | 'progress';
+  | 'progress'
+  | 'programRules';
 
 export type MetricTrend = 'improving' | 'stable' | 'declining' | 'fluctuating';
 

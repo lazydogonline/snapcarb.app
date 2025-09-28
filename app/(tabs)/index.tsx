@@ -1,16 +1,69 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Utensils, Pill, Target, TrendingUp } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Droplets, Heart, Ruler, Target, TrendingUp, Pill, AlertTriangle } from 'lucide-react-native';
 import { useHealth } from '@/hooks/health-store';
 import ProgressCard from '@/components/ProgressCard';
 
 export default function HomeScreen() {
-  const { getTodayProgress, challenge } = useHealth();
+  const { getTodayProgress, challenge, healthMetrics } = useHealth();
+  const insets = useSafeAreaInsets();
   const progress = getTodayProgress();
   
   const completedDays = challenge.filter(day => day.completed).length;
   const currentDay = challenge.find(day => day.date === new Date().toDateString());
+
+  const getChallengeStatusColor = () => {
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    const missedDays = challenge.filter(day => {
+      const dayDate = new Date(day.date);
+      const isPast = dayDate < today;
+      const isToday = day.date === todayString;
+      
+      // Don't count today as "missed" - only count truly past days
+      return isPast && !isToday && !day.completed;
+    }).length;
+    
+    if (missedDays > 0) return '#ef4444'; // Red - bad (missed days)
+    if (completedDays >= 7) return '#22c55e'; // Green - good (7+ days)
+    return '#f59e0b'; // Orange - mediocre (in progress)
+  };
+
+  const getChallengeStatusText = () => {
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    const missedDays = challenge.filter(day => {
+      const dayDate = new Date(day.date);
+      const isPast = dayDate < today;
+      const isToday = day.date === todayString;
+      
+      // Don't count today as "missed" - only count truly past days
+      return isPast && !isToday && !day.completed;
+    }).length;
+
+    if (missedDays > 0) return 'Reset Required';
+    if (completedDays === 10) return 'Completed!';
+    if (completedDays >= 7) return 'Almost There!';
+    return `${completedDays}/10 Days`;
+  };
+
+  // Calculate compliance percentage
+  const getComplianceScore = () => {
+    const rules = healthMetrics.programRules;
+    const complianceCount = [rules.noWheat, rules.noSugar, rules.noGrains].filter(Boolean).length;
+    return Math.round((complianceCount / 3) * 100);
+  };
+
+  const getComplianceColor = () => {
+    const score = getComplianceScore();
+    if (score === 100) return '#22c55e'; // Green
+    if (score >= 67) return '#f59e0b';   // Orange  
+    return '#ef4444'; // Red
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,30 +72,34 @@ export default function HomeScreen() {
         style={styles.header}
       >
         <Text style={styles.headerTitle}>SnapCarb</Text>
-        <Text style={styles.headerSubtitle}>Infinite Health Companion</Text>
+        <Text style={styles.headerSubtitle}>Your journey to better health</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 250 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionTitle}>Today&apos;s Progress</Text>
         
         <View style={styles.progressGrid}>
           <View style={styles.progressRow}>
             <View style={styles.progressItem}>
               <ProgressCard
-                title="Net Carbs"
-                value={`${progress.totalNetCarbs}g`}
-                subtitle={progress.totalNetCarbs <= 15 ? "Great!" : "Over limit"}
-                color={progress.totalNetCarbs <= 15 ? "#22c55e" : "#ef4444"}
-                icon={<Utensils color="#ffffff" size={20} />}
+                title="Glucose Test"
+                value={healthMetrics.glucoseLevel.toString()}
+                subtitle="mg/dL latest"
+                color={healthMetrics.glucoseLevel <= 100 ? "#22c55e" : healthMetrics.glucoseLevel <= 125 ? "#f59e0b" : "#ef4444"}
+                icon={<Droplets color="#ffffff" size={20} />}
               />
             </View>
             <View style={styles.progressItem}>
               <ProgressCard
-                title="Meals Logged"
-                value={progress.mealsLogged}
-                subtitle="Today"
-                color="#3b82f6"
-                icon={<Utensils color="#ffffff" size={20} />}
+                title="Program Rules"
+                value={`${getComplianceScore()}%`}
+                subtitle="Compliance Score"
+                color={getComplianceColor()}
+                icon={<Heart color="#ffffff" size={20} />}
               />
             </View>
           </View>
@@ -50,47 +107,33 @@ export default function HomeScreen() {
           <View style={styles.progressRow}>
             <View style={styles.progressItem}>
               <ProgressCard
-                title="Supplements"
-                value={`${progress.supplementsTaken}/${progress.totalSupplements}`}
-                subtitle="Taken today"
-                color="#8b5cf6"
-                icon={<Pill color="#ffffff" size={20} />}
+                title="Waist Goal"
+                value={`${healthMetrics.waistMeasurement || 82}cm`}
+                subtitle="Latest measurement"
+                color={(healthMetrics.waistMeasurement || 82) < 82 ? "#22c55e" : (healthMetrics.waistMeasurement || 82) === 82 ? "#f59e0b" : "#ef4444"}
+                icon={<Ruler color="#ffffff" size={20} />}
               />
             </View>
             <View style={styles.progressItem}>
               <ProgressCard
                 title="Challenge"
-                value={`${completedDays}/10`}
-                subtitle="Days completed"
-                color="#f59e0b"
+                value={getChallengeStatusText()}
+                subtitle="Challenge status"
+                color={getChallengeStatusColor()}
                 icon={<Target color="#ffffff" size={20} />}
               />
             </View>
           </View>
         </View>
 
-        {currentDay && (
-          <View style={styles.challengeSection}>
-            <Text style={styles.sectionTitle}>Today&apos;s Challenge</Text>
-            <View style={styles.challengeCard}>
-              <View style={styles.challengeHeader}>
-                <Target color="#22c55e" size={24} />
-                <Text style={styles.challengeTitle}>Day {currentDay.day} - Detox Challenge</Text>
-              </View>
-              <Text style={styles.challengeDescription}>
-                Log your meals, track symptoms, and stay wheat-free!
-              </Text>
-              <View style={styles.challengeStatus}>
-                <Text style={[
-                  styles.challengeStatusText,
-                  { color: currentDay.completed ? '#22c55e' : '#6b7280' }
-                ]}>
-                  {currentDay.completed ? '✓ Completed' : 'In Progress'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+
+        {/* Medical Warning Banner */}
+        <View style={styles.warningBanner}>
+          <AlertTriangle size={16} color="#DC2626" />
+          <Text style={styles.warningText}>
+            <Text style={styles.warningBold}>NOT MEDICAL ADVICE:</Text> This app is for informational purposes only. Always consult healthcare providers for medical decisions.
+          </Text>
+        </View>
 
         <View style={styles.tipsSection}>
           <Text style={styles.sectionTitle}>Daily Tips</Text>
@@ -120,8 +163,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   headerTitle: {
     fontSize: 28,
@@ -154,9 +195,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 12,
+    height: 140, // Fixed height for each row
   },
   progressItem: {
     flex: 1,
+    height: '100%', // Fill the row height
   },
   challengeSection: {
     marginBottom: 24,
@@ -194,6 +237,26 @@ const styles = StyleSheet.create({
   challengeStatusText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  warningBanner: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#991B1B',
+  },
+  warningBold: {
+    fontWeight: '700',
   },
   tipsSection: {
     marginBottom: 24,

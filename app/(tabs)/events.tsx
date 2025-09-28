@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Linking } from 'react-native';
+import { Calendar, Clock, Users, Video, BookOpen, MessageCircle, Heart, Play, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { healthEvents } from '@/constants/health-data';
-import DrDavisEvents from '@/components/DrDavisEvents';
-import SociabilityTracker from '@/components/SociabilityTracker';
 
 export default function EventsScreen() {
-  const [activeTab, setActiveTab] = useState<'events' | 'sociability'>('events');
+  const [activeTab, setActiveTab] = useState<'videos' | 'events'>('videos');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const insets = useSafeAreaInsets();
   
   const upcomingEvents = healthEvents.filter(event => event.date > new Date());
   const pastEvents = healthEvents.filter(event => event.date <= new Date());
@@ -46,42 +48,171 @@ export default function EventsScreen() {
     }
   };
 
-  const handleEventPress = (event: any) => {
-    // In a real app, this would open the event details or registration
-    console.log('Event pressed:', event.title);
+  const handleEventPress = async (event: any) => {
+    // For now, link to Inner Circle where people can register for events
+    try {
+      const supported = await Linking.canOpenURL('https://innercircle.drdavisinfinitehealth.com/landing/');
+      if (supported) {
+        await Linking.openURL('https://innercircle.drdavisinfinitehealth.com/landing/');
+      }
+    } catch (error) {
+      console.error('Error opening registration link:', error);
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleVideoPress = async (videoUrl: string) => {
+    try {
+      const supported = await Linking.canOpenURL(videoUrl);
+      if (supported) {
+        await Linking.openURL(videoUrl);
+      }
+    } catch (error) {
+      console.error('Error opening video:', error);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Health Events</Text>
+      <LinearGradient
+        colors={['#4ade80', '#22c55e', '#16a34a']}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>Events & Learning</Text>
         <Text style={styles.headerSubtitle}>
-          Dr. William Davis&apos;s Infinite Health Program
+          Latest health insights and upcoming events
         </Text>
-      </View>
+      </LinearGradient>
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
-          onPress={() => setActiveTab('events')}
+          style={[styles.tab, activeTab === 'videos' && styles.activeTab]}
+          onPress={() => setActiveTab('videos')}
+          accessibilityLabel="Switch to video library tab"
+          accessibilityRole="button"
         >
-          <Calendar size={20} color={activeTab === 'events' ? '#3b82f6' : '#6b7280'} />
-          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Events</Text>
+          <Video size={20} color={activeTab === 'videos' ? '#8B5CF6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'videos' && styles.activeTabText]}>Video Library</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'sociability' && styles.activeTab]}
-          onPress={() => setActiveTab('sociability')}
+          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
+          onPress={() => setActiveTab('events')}
+          accessibilityLabel="Switch to live events tab"
+          accessibilityRole="button"
         >
-          <Heart size={20} color={activeTab === 'sociability' ? '#3b82f6' : '#6b7280'} />
-          <Text style={[styles.tabText, activeTab === 'sociability' && styles.activeTabText]}>Sociability</Text>
+          <Calendar size={20} color={activeTab === 'events' ? '#8B5CF6' : '#6b7280'} />
+          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>Live Events</Text>
         </TouchableOpacity>
       </View>
 
       {/* Content based on active tab */}
+      {activeTab === 'videos' && (
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.videoLibraryHeader}>
+            <Text style={styles.sectionTitle}>Dr. Davis Video Library</Text>
+            <Text style={styles.sectionDescription}>
+              Stay updated with Dr. William Davis's latest research, insights, and health strategies. New videos added regularly across all health categories.
+            </Text>
+          </View>
+
+          {['DIETARY FIBER', 'STATINS', 'HEART', 'MICROBES', 'GRAINS'].map((category) => {
+            // Use actual Dr. Davis video data from health-data.ts
+            const categoryVideos = healthEvents.filter(event => 
+              (event as any).category === category && (event as any).videoUrl
+            );
+            if (categoryVideos.length === 0) return null;
+            
+            const isExpanded = expandedCategories.includes(category);
+            const categoryColors: { [key: string]: string } = {
+              'DIETARY FIBER': '#8B5CF6',
+              'STATINS': '#10B981', 
+              'HEART': '#EF4444',
+              'MICROBES': '#F59E0B',
+              'GRAINS': '#06B6D4'
+            };
+            
+            return (
+              <View key={category} style={styles.categoryContainer}>
+                <TouchableOpacity
+                  style={[styles.categoryHeader, { backgroundColor: categoryColors[category] || '#8B5CF6' }]}
+                  onPress={() => toggleCategory(category)}
+                  accessibilityLabel={`${isExpanded ? 'Hide' : 'Show'} ${category} videos`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.categoryHeaderContent}>
+                    <Video size={24} color="#FFFFFF" />
+                    <Text style={styles.categoryName}>{category}</Text>
+                  </View>
+                  {isExpanded ? 
+                    <ChevronDown size={24} color="#FFFFFF" /> : 
+                    <ChevronRight size={24} color="#FFFFFF" />
+                  }
+                </TouchableOpacity>
+                
+                {isExpanded && (
+                  <View style={styles.videosContainer}>
+                    {categoryVideos.map((video) => (
+                      <TouchableOpacity
+                        key={video.id}
+                        style={styles.videoCard}
+                        onPress={() => handleVideoPress((video as any).videoUrl || '#')}
+                        accessibilityLabel={`Watch ${video.title} video`}
+                        accessibilityRole="button"
+                      >
+                        <View style={styles.videoInfo}>
+                          <Text style={styles.videoTitle}>{video.title}</Text>
+                          <Text style={styles.videoDescription}>{video.description}</Text>
+                        </View>
+                        <ExternalLink size={20} color="#6B7280" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {activeTab === 'events' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Join Inner Circle */}
+          <TouchableOpacity 
+            style={styles.innerCircleCard}
+            onPress={() => handleVideoPress('https://innercircle.drdavisinfinitehealth.com/landing/')}
+            accessibilityLabel="Join Dr Davis Inner Circle program"
+            accessibilityRole="button"
+          >
+            <LinearGradient
+              colors={['#22c55e', '#16a34a', '#15803d']}
+              style={styles.innerCircleGradient}
+            >
+              <Users size={32} color="#FFFFFF" />
+              <Text style={styles.innerCircleTitle}>Join Dr. Davis Inner Circle</Text>
+              <Text style={styles.innerCircleDescription}>
+                Get exclusive access to Dr. Davis's advanced health protocols, community support, and personalized guidance
+              </Text>
+              <ExternalLink size={20} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {upcomingEvents.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Upcoming Events</Text>
@@ -90,6 +221,8 @@ export default function EventsScreen() {
                 key={event.id}
                 style={styles.eventCard}
                 onPress={() => handleEventPress(event)}
+                accessibilityLabel={`Join ${event.title} event`}
+                accessibilityRole="button"
               >
                 <View style={styles.eventHeader}>
                   <View style={styles.eventIcon}>
@@ -125,7 +258,12 @@ export default function EventsScreen() {
                 </View>
 
                 <View style={styles.eventFooter}>
-                  <TouchableOpacity style={styles.joinButton}>
+                  <TouchableOpacity 
+                    style={styles.joinButton}
+                    onPress={() => handleEventPress(event)}
+                    accessibilityLabel={`Join ${event.title} event`}
+                    accessibilityRole="button"
+                  >
                     <Users color="#ffffff" size={16} />
                     <Text style={styles.joinButtonText}>Join Event</Text>
                   </TouchableOpacity>
@@ -135,50 +273,6 @@ export default function EventsScreen() {
           </>
         )}
 
-        {pastEvents.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Past Events</Text>
-            {pastEvents.map((event) => (
-              <View key={event.id} style={[styles.eventCard, styles.pastEventCard]}>
-                <View style={styles.eventHeader}>
-                  <View style={styles.eventIcon}>
-                    {getEventIcon(event.type)}
-                  </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={[styles.eventTitle, styles.pastEventTitle]}>
-                      {event.title}
-                    </Text>
-                    <Text style={styles.eventType}>
-                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                    </Text>
-                  </View>
-                  <View style={styles.pastEventBadge}>
-                    <Text style={styles.pastEventBadgeText}>ENDED</Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.eventDescription, styles.pastEventDescription]}>
-                  {event.description}
-                </Text>
-
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetail}>
-                    <Calendar color="#9ca3af" size={16} />
-                    <Text style={[styles.eventDetailText, styles.pastEventDetailText]}>
-                      {formatDate(event.date)}
-                    </Text>
-                  </View>
-                  <View style={styles.eventDetail}>
-                    <Clock color="#9ca3af" size={16} />
-                    <Text style={[styles.eventDetailText, styles.pastEventDetailText]}>
-                      {event.time}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </>
-        )}
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>About These Events</Text>
@@ -216,9 +310,6 @@ export default function EventsScreen() {
       </ScrollView>
       )}
 
-      {activeTab === 'sociability' && (
-        <SociabilityTracker />
-      )}
     </SafeAreaView>
   );
 }
@@ -229,11 +320,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#3b82f6',
     padding: 24,
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingBottom: 30,
   },
   headerTitle: {
     fontSize: 28,
@@ -426,6 +515,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  videoLibraryHeader: {
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  categoryContainer: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  categoryHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginLeft: 12,
+  },
+  videosContainer: {
+    backgroundColor: '#ffffff',
+  },
+  videoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  videoInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  videoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  videoDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+  innerCircleCard: {
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  innerCircleGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  innerCircleTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  innerCircleDescription: {
+    fontSize: 14,
+    color: '#ffffff',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+    opacity: 0.9,
   },
 
 });

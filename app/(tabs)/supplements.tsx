@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Pill, CheckCircle, Circle, RotateCcw } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHealth } from '@/hooks/health-store';
 
 export default function SupplementsScreen() {
   const { supplements, toggleSupplement, resetDailySupplements } = useHealth();
+  const insets = useSafeAreaInsets();
   
   const takenCount = supplements.filter(s => s.taken).length;
   const completionPercentage = (takenCount / supplements.length) * 100;
@@ -27,7 +29,11 @@ export default function SupplementsScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.progressSection}>
           <View style={styles.progressBar}>
             <View 
@@ -43,6 +49,8 @@ export default function SupplementsScreen() {
           <TouchableOpacity 
             style={styles.resetButton} 
             onPress={resetDailySupplements}
+            accessibilityLabel="Reset all daily supplement progress"
+            accessibilityRole="button"
           >
             <RotateCcw color="#6b7280" size={20} />
             <Text style={styles.resetButtonText}>Reset Daily Progress</Text>
@@ -59,6 +67,8 @@ export default function SupplementsScreen() {
               supplement.taken && styles.supplementCardTaken
             ]}
             onPress={() => toggleSupplement(supplement.id)}
+            accessibilityLabel={`Mark ${supplement.name} as ${supplement.taken ? 'not taken' : 'taken'}`}
+            accessibilityRole="button"
           >
             <View style={styles.supplementHeader}>
               <View style={styles.supplementIcon}>
@@ -132,8 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#8b5cf6',
     padding: 24,
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   headerTitle: {
     fontSize: 28,

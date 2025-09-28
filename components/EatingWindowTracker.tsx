@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { Clock, Play, Square, Timer, Calendar, TrendingUp } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Animated } from 'react-native';
+import { Clock, Play, Square, Timer, Calendar, TrendingUp, Target, Award, AlertTriangle } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 
 interface EatingWindow {
@@ -9,6 +9,8 @@ interface EatingWindow {
   endTime: string;
   duration: number; // in hours
   fastingHours: number;
+  complianceScore: number; // 1-10 score
+  notes?: string;
 }
 
 export default function EatingWindowTracker() {
@@ -17,6 +19,9 @@ export default function EatingWindowTracker() {
   const [eatingWindow, setEatingWindow] = useState<EatingWindow | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [weeklyStats, setWeeklyStats] = useState<EatingWindow[]>([]);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [complianceStreak, setComplianceStreak] = useState<number>(0);
+  const [fadeAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
     const now = new Date();
@@ -30,18 +35,43 @@ export default function EatingWindowTracker() {
       setIsTracking(false);
     }
 
-    // Update current time every minute
+    // Update current time every minute and calculate time remaining
     const updateTime = () => {
       const now = new Date();
       const timeStr = now.toTimeString().slice(0, 5);
       setCurrentTime(timeStr);
+      
+      // Calculate time remaining in eating window
+      if (eatingWindow && isTracking) {
+        const current = new Date(`2000-01-01T${timeStr}:00`);
+        const end = new Date(`2000-01-01T${eatingWindow.endTime}:00`);
+        let remaining = (end.getTime() - current.getTime()) / (1000 * 60 * 60);
+        
+        if (remaining < 0) {
+          remaining = 0;
+          // Window is overdue - flash warning
+          if (remaining === 0 && timeRemaining > 0) {
+            flashWarning();
+          }
+        }
+        setTimeRemaining(remaining);
+      }
     };
     
     updateTime();
     const interval = setInterval(updateTime, 60000);
     
     return () => clearInterval(interval);
-  }, [weeklyStats]);
+  }, [weeklyStats, eatingWindow, isTracking, timeRemaining]);
+
+  const flashWarning = () => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
 
   const startEatingWindow = () => {
     const now = new Date();
@@ -53,15 +83,28 @@ export default function EatingWindowTracker() {
       startTime,
       endTime,
       duration: 8,
-      fastingHours: 0
+      fastingHours: 0,
+      complianceScore: 10 // Start with perfect score
     };
     
     setEatingWindow(newWindow);
     setIsTracking(true);
+    setTimeRemaining(8); // 8 hours remaining
     
     Alert.alert(
-      'Eating Window Started! 🍽️',
-      `You started eating at ${startTime}\nYour 8-hour window ends at ${endTime}\n\nLog when you finish eating to track your fasting period.`
+      '🍽️ Eating Window Started!',
+      `Your 8-hour eating window is now active!\n\n⏰ Start: ${formatTime(startTime)}\n⏰ End: ${formatTime(endTime)}\n\n💪 Stay within your window to maintain your fasting rhythm!`,
+      [
+        { text: 'Got it!', style: 'default' },
+        { text: 'View Tips', onPress: showComplianceTips }
+      ]
+    );
+  };
+
+  const showComplianceTips = () => {
+    Alert.alert(
+      '💡 Compliance Tips',
+      '• Plan your meals ahead of time\n• Set reminders for your end time\n• Keep healthy snacks ready\n• Stay hydrated during eating window\n• Avoid grazing - eat mindfully\n\nRemember: Your body loves routine! 🎯'
     );
   };
 
@@ -70,7 +113,7 @@ export default function EatingWindowTracker() {
     
     Alert.prompt(
       'End Eating Window',
-      'What time did you finish eating? (HH:MM)',
+      'What time did you finish eating? (HH:MM)\n\n💡 Be honest - this helps track your progress!',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'End Window', onPress: (endTime) => {
@@ -87,23 +130,52 @@ export default function EatingWindowTracker() {
             
             const fastingHours = 24 - actualDuration;
             
+            // Calculate compliance score based on how well they stuck to 8 hours
+            const targetDuration = 8;
+            const durationDiff = Math.abs(actualDuration - targetDuration);
+            let complianceScore = 10;
+            
+            if (durationDiff <= 0.5) complianceScore = 10; // Perfect
+            else if (durationDiff <= 1) complianceScore = 9; // Excellent
+            else if (durationDiff <= 1.5) complianceScore = 8; // Very Good
+            else if (durationDiff <= 2) complianceScore = 7; // Good
+            else if (durationDiff <= 2.5) complianceScore = 6; // Fair
+            else if (durationDiff <= 3) complianceScore = 5; // Needs Improvement
+            else complianceScore = 4; // Poor
+            
             const completedWindow: EatingWindow = {
               ...eatingWindow,
               endTime: actualEndTime,
               duration: Math.round(actualDuration * 10) / 10,
-              fastingHours: Math.round(fastingHours * 10) / 10
+              fastingHours: Math.round(fastingHours * 10) / 10,
+              complianceScore
             };
             
             setEatingWindow(completedWindow);
             setIsTracking(false);
+            setTimeRemaining(0);
             
             // Add to weekly stats
             const updatedStats = weeklyStats.filter(w => w.date !== today);
             setWeeklyStats([...updatedStats, completedWindow]);
             
+            // Update compliance streak
+            if (complianceScore >= 8) {
+              setComplianceStreak(prev => prev + 1);
+            } else {
+              setComplianceStreak(0);
+            }
+            
+            // Show motivational message based on score
+            const motivationalMessage = getMotivationalMessage(complianceScore, actualDuration);
+            
             Alert.alert(
-              'Eating Window Complete! ⏰',
-              `You ate for ${completedWindow.duration} hours\nYou fasted for ${completedWindow.fastingHours} hours\n\nGreat job! 🎉`
+              '⏰ Eating Window Complete!',
+              `${motivationalMessage}\n\n📊 Your Results:\n• Eating Duration: ${completedWindow.duration}h\n• Fasting Duration: ${completedWindow.fastingHours}h\n• Compliance Score: ${complianceScore}/10\n\n${getComplianceStreakMessage()}`,
+              [
+                { text: 'View Details', onPress: () => {} },
+                { text: 'Great!', style: 'default' }
+              ]
             );
           } else {
             Alert.alert('Invalid Time', 'Please enter time in HH:MM format (e.g., 22:00)');
@@ -113,6 +185,26 @@ export default function EatingWindowTracker() {
       'plain-text',
       eatingWindow.endTime
     );
+  };
+
+  const getMotivationalMessage = (score: number, duration: number): string => {
+    if (score >= 9) {
+      return '🎉 EXCELLENT! You nailed your eating window perfectly!';
+    } else if (score >= 7) {
+      return '👍 Great job! You stayed very close to your target window.';
+    } else if (score >= 5) {
+      return '💪 Good effort! With practice, you\'ll get even better at timing.';
+    } else {
+      return '📚 Learning opportunity! Tomorrow is a new day to improve.';
+    }
+  };
+
+  const getComplianceStreakMessage = (): string => {
+    if (complianceStreak === 0) return '💪 Start building your streak tomorrow!';
+    if (complianceStreak === 1) return '🔥 1 day streak! Keep it going!';
+    if (complianceStreak < 5) return `🔥 ${complianceStreak} day streak! You\'re building momentum!`;
+    if (complianceStreak < 10) return `🔥 ${complianceStreak} day streak! You\'re a fasting pro!`;
+    return `🔥 ${complianceStreak} day streak! You\'re absolutely crushing it! 🚀`;
   };
 
   const calculateEndTime = (startTime: string): string => {
@@ -166,15 +258,24 @@ export default function EatingWindowTracker() {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const formatTimeRemaining = (hours: number): string => {
+    if (hours <= 0) return '0:00';
+    const wholeHours = Math.floor(hours);
+    const minutes = Math.round((hours - wholeHours) * 60);
+    return `${wholeHours}:${minutes.toString().padStart(2, '0')}`;
+  };
+
   const getWeeklyAverage = () => {
-    if (weeklyStats.length === 0) return { avgDuration: 0, avgFasting: 0 };
+    if (weeklyStats.length === 0) return { avgDuration: 0, avgFasting: 0, avgCompliance: 0 };
     
     const totalDuration = weeklyStats.reduce((sum, w) => sum + w.duration, 0);
     const totalFasting = weeklyStats.reduce((sum, w) => sum + w.fastingHours, 0);
+    const totalCompliance = weeklyStats.reduce((sum, w) => sum + w.complianceScore, 0);
     
     return {
       avgDuration: Math.round((totalDuration / weeklyStats.length) * 10) / 10,
-      avgFasting: Math.round((totalFasting / weeklyStats.length) * 10) / 10
+      avgFasting: Math.round((totalFasting / weeklyStats.length) * 10) / 10,
+      avgCompliance: Math.round((totalCompliance / weeklyStats.length) * 10) / 10
     };
   };
 
@@ -186,8 +287,16 @@ export default function EatingWindowTracker() {
       <View style={styles.header}>
         <Clock size={32} color={colors.primary} />
         <Text style={styles.headerTitle}>Eating Window Tracker</Text>
-        <Text style={styles.headerSubtitle}>Track your daily 8-hour eating windows</Text>
+        <Text style={styles.headerSubtitle}>Master your 8-hour eating rhythm! 🎯</Text>
       </View>
+
+      {/* Compliance Streak */}
+      {complianceStreak > 0 && (
+        <View style={styles.streakCard}>
+          <Award size={24} color={colors.warning} />
+          <Text style={styles.streakText}>🔥 {complianceStreak} Day Compliance Streak!</Text>
+        </View>
+      )}
 
       {/* Current Status */}
       <View style={styles.statusCard}>
@@ -211,10 +320,23 @@ export default function EatingWindowTracker() {
               <Text style={styles.statusLabel}>Planned End:</Text>
               <Text style={styles.statusValue}>{formatTime(eatingWindow.endTime)}</Text>
             </View>
-            {eatingWindow.endTime !== eatingWindow.endTime && (
-              <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Actual End:</Text>
-                <Text style={styles.statusValue}>{formatTime(eatingWindow.endTime)}</Text>
+            
+            {/* Time Remaining Countdown */}
+            {isTracking && timeRemaining > 0 && (
+              <View style={styles.countdownContainer}>
+                <Text style={styles.countdownLabel}>⏰ Time Remaining:</Text>
+                <Animated.View style={[styles.countdownTimer, { opacity: fadeAnim }]}>
+                  <Text style={styles.countdownText}>{formatTimeRemaining(timeRemaining)}</Text>
+                  <Text style={styles.countdownUnit}>hours</Text>
+                </Animated.View>
+              </View>
+            )}
+            
+            {/* Overdue Warning */}
+            {timeRemaining <= 0 && isTracking && (
+              <View style={styles.overdueWarning}>
+                <AlertTriangle size={20} color={colors.error} />
+                <Text style={styles.overdueText}>⚠️ Your eating window has ended!</Text>
               </View>
             )}
           </>
@@ -231,14 +353,24 @@ export default function EatingWindowTracker() {
       {/* Action Buttons */}
       <View style={styles.actionsContainer}>
         {!eatingWindow && (
-          <TouchableOpacity style={styles.startButton} onPress={startEatingWindow}>
+          <TouchableOpacity 
+            style={styles.startButton} 
+            onPress={startEatingWindow}
+            accessibilityLabel="Start eating window tracking"
+            accessibilityRole="button"
+          >
             <Play size={24} color="white" />
             <Text style={styles.startButtonText}>Start Eating Window</Text>
           </TouchableOpacity>
         )}
         
         {isTracking && (
-          <TouchableOpacity style={styles.endButton} onPress={endEatingWindow}>
+          <TouchableOpacity 
+            style={styles.endButton} 
+            onPress={endEatingWindow}
+            accessibilityLabel="End eating window tracking"
+            accessibilityRole="button"
+          >
             <Square size={24} color="white" />
             <Text style={styles.endButtonText}>End Eating Window</Text>
           </TouchableOpacity>
@@ -257,6 +389,11 @@ export default function EatingWindowTracker() {
                 <Clock size={20} color={colors.secondary} />
                 <Text style={styles.statValue}>{eatingWindow.fastingHours}h</Text>
                 <Text style={styles.statLabel}>Fasting</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Target size={20} color={colors.warning} />
+                <Text style={styles.statValue}>{eatingWindow.complianceScore}/10</Text>
+                <Text style={styles.statLabel}>Score</Text>
               </View>
             </View>
           </View>
@@ -279,6 +416,10 @@ export default function EatingWindowTracker() {
             <Text style={styles.weeklyStatValue}>{weeklyAverage.avgFasting}h</Text>
             <Text style={styles.weeklyStatLabel}>Avg Fasting</Text>
           </View>
+          <View style={styles.weeklyStat}>
+            <Text style={styles.weeklyStatValue}>{weeklyAverage.avgCompliance}/10</Text>
+            <Text style={styles.weeklyStatLabel}>Avg Score</Text>
+          </View>
         </View>
         
         {weeklyStats.length > 0 && (
@@ -299,6 +440,9 @@ export default function EatingWindowTracker() {
                   <Text style={styles.historyDurationText}>
                     {window.duration}h eating, {window.fastingHours}h fasting
                   </Text>
+                  <Text style={[styles.historyScoreText, { color: getScoreColor(window.complianceScore) }]}>
+                    Score: {window.complianceScore}/10
+                  </Text>
                 </View>
               </View>
             ))}
@@ -306,17 +450,26 @@ export default function EatingWindowTracker() {
         )}
       </View>
 
-      {/* Tips */}
+      {/* Enhanced Tips */}
       <View style={styles.tipsCard}>
-        <Text style={styles.tipsTitle}>💡 Pro Tips</Text>
-        <Text style={styles.tipText}>• Start your eating window with your first meal of the day</Text>
-        <Text style={styles.tipText}>• Aim for 8 hours of eating and 16 hours of fasting</Text>
-        <Text style={styles.tipText}>• Be consistent - your body loves routine!</Text>
-        <Text style={styles.tipText}>• Track your progress to see patterns and improvements</Text>
+        <Text style={styles.tipsTitle}>💡 Pro Tips for Success</Text>
+        <Text style={styles.tipText}>• 🎯 Plan your meals ahead - know what you'll eat and when</Text>
+        <Text style={styles.tipText}>• ⏰ Set phone reminders 30 minutes before your window ends</Text>
+        <Text style={styles.tipText}>• 🥗 Keep healthy, satisfying foods ready to avoid overeating</Text>
+        <Text style={styles.tipText}>• 💧 Stay hydrated - thirst can feel like hunger</Text>
+        <Text style={styles.tipText}>• 🧘‍♀️ Eat mindfully - savor each bite, avoid distractions</Text>
+        <Text style={styles.tipText}>• 📱 Use this tracker consistently - your body loves routine!</Text>
       </View>
     </ScrollView>
   );
 }
+
+const getScoreColor = (score: number) => {
+  if (score >= 9) return colors.success;
+  if (score >= 7) return colors.primary;
+  if (score >= 5) return colors.warning;
+  return colors.error;
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -339,6 +492,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  streakCard: {
+    backgroundColor: colors.cardBackground,
+    margin: 20,
+    padding: 15,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+  },
+  streakText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.warning,
+    marginLeft: 10,
   },
   statusCard: {
     backgroundColor: colors.cardBackground,
@@ -370,6 +543,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
+  },
+  countdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  countdownLabel: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginRight: 10,
+  },
+  countdownTimer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  countdownText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  countdownUnit: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginLeft: 5,
+  },
+  overdueWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: colors.error,
+  },
+  overdueText: {
+    fontSize: 16,
+    color: colors.error,
+    marginLeft: 10,
   },
   currentStatus: {
     flexDirection: 'row',
@@ -542,6 +755,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  historyScoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 5,
   },
   tipsCard: {
     backgroundColor: colors.cardBackground,

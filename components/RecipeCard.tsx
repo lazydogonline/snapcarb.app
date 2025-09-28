@@ -1,19 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, CheckCircle, XCircle, AlertCircle, Share2, Bookmark, Printer, Lightbulb, Heart, Leaf, Brain, Shield, Zap } from 'lucide-react-native';
-import { SnapCarbRecipe } from '@/services/recipe-service';
+import { Clock, Users, Target, CheckCircle, XCircle, AlertCircle, Share2, Bookmark, Lightbulb, Heart, Leaf, Brain, Shield, Zap } from 'lucide-react-native';
+import { SnapCarbRecipe } from '../services/recipe-service';
 
 interface RecipeCardProps {
   recipe: SnapCarbRecipe;
-  onSave?: () => void;
-  onShare?: () => void;
-  onPrint?: () => void;
 }
 
 const { width } = Dimensions.get('window');
 
-export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeCardProps) {
+export default function RecipeCard({ recipe }: RecipeCardProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Easy': return '#10B981';
@@ -31,7 +28,17 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      {/* Recipe Image */}
+      {recipe.imageUrl && (
+        <Image 
+          source={{ uri: recipe.imageUrl }}
+          style={styles.recipeImage}
+          resizeMode="cover"
+          accessibilityLabel={`Recipe image for ${recipe.title}`}
+        />
+      )}
+      
       {/* Header Section */}
       <LinearGradient
         colors={['#1F2937', '#374151']}
@@ -80,16 +87,19 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
                 <XCircle size={20} color="#EF4444" />
               )}
               <View style={styles.ingredientDetails}>
-                <Text style={[
-                  styles.ingredientName,
-                  !ingredient.isAllowed && styles.restrictedIngredient
-                ]}>
-                  {ingredient.name}
-                </Text>
+                <View style={styles.ingredientHeader}>
+                  <Text style={[
+                    styles.ingredientName,
+                    !ingredient.isAllowed && styles.restrictedIngredient
+                  ]}>
+                    {ingredient.name}
+                  </Text>
+                  <View style={[
+                    styles.complianceDot,
+                    { backgroundColor: ingredient.isAllowed ? '#10B981' : '#EF4444' }
+                  ]} />
+                </View>
                 <Text style={styles.ingredientAmount}>{ingredient.amount}</Text>
-                <Text style={styles.carbsInfo}>
-                  {ingredient.net_carbs_g}g net carbs • {ingredient.fiber_g}g fiber
-                </Text>
               </View>
             </View>
             
@@ -121,8 +131,8 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
         <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
         <View style={styles.nutritionGrid}>
           <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{recipe.nutrition.calories}</Text>
-            <Text style={styles.nutritionLabel}>Calories</Text>
+            <Text style={styles.nutritionValue}>{recipe.nutrition.netCarbs}g</Text>
+            <Text style={styles.nutritionLabel}>NET CARBS</Text>
           </View>
           <View style={styles.nutritionItem}>
             <Text style={styles.nutritionValue}>{recipe.nutrition.protein}g</Text>
@@ -135,10 +145,6 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
           <View style={styles.nutritionItem}>
             <Text style={styles.nutritionValue}>{recipe.nutrition.fiber}g</Text>
             <Text style={styles.nutritionLabel}>Fiber</Text>
-          </View>
-          <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{recipe.nutrition.netCarbs}g</Text>
-            <Text style={styles.nutritionLabel}>Net Carbs</Text>
           </View>
         </View>
       </View>
@@ -247,24 +253,7 @@ export default function RecipeCard({ recipe, onSave, onShare, onPrint }: RecipeC
         <Text style={styles.sourceText}>Source: {recipe.source}</Text>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.actionButton} onPress={onSave}>
-          <Bookmark size={20} color="#6B7280" />
-          <Text style={styles.actionButtonText}>Save</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
-          <Share2 size={20} color="#6B7280" />
-          <Text style={styles.actionButtonText}>Share</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={onPrint}>
-          <Printer size={20} color="#6B7280" />
-          <Text style={styles.actionButtonText}>Print</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -273,6 +262,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
     minHeight: '100%',
+  },
+  recipeImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#F3F4F6',
   },
   header: {
     padding: 20,
@@ -376,6 +370,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
   },
+  complianceStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   swapContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -460,22 +459,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
-    paddingBottom: 40,
-  },
-  actionButton: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 8,
-    fontWeight: '500',
-  },
   
   // Cool Facts Styles
   sectionHeader: {
@@ -525,5 +508,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4B5563',
     lineHeight: 20,
+  },
+  ingredientHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  complianceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 8,
   },
 });

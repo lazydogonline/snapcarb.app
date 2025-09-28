@@ -369,3 +369,15 @@ CREATE POLICY "Only admins can modify USDA data" ON public.usda_food_category_as
   FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
 
+
+
+
+
+
+
+
+
+
+
+
+

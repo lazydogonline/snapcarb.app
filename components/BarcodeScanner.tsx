@@ -82,7 +82,12 @@ export default function BarcodeScanner() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Barcode Scanner</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={resetScanner}>
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={resetScanner}
+          accessibilityLabel="Close barcode scanner"
+          accessibilityRole="button"
+        >
           <X size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -100,6 +105,8 @@ export default function BarcodeScanner() {
           <TouchableOpacity 
             style={styles.scanButton}
             onPress={() => setScanning(true)}
+            accessibilityLabel="Start camera barcode scanner"
+            accessibilityRole="button"
           >
             <Text style={styles.scanButtonText}>Start Camera Scanner</Text>
           </TouchableOpacity>
@@ -124,6 +131,8 @@ export default function BarcodeScanner() {
               style={styles.submitButton}
               onPress={handleManualBarcodeSubmit}
               disabled={loading}
+              accessibilityLabel="Submit barcode manually"
+              accessibilityRole="button"
             >
               {loading ? (
                 <ActivityIndicator color={colors.background} size="small" />
@@ -148,6 +157,8 @@ export default function BarcodeScanner() {
             <TouchableOpacity 
               style={styles.backButton}
               onPress={() => setScanning(false)}
+              accessibilityLabel="Go back to main scanner screen"
+              accessibilityRole="button"
             >
               <Text style={styles.backButtonText}>Go Back</Text>
             </TouchableOpacity>
@@ -183,10 +194,20 @@ export default function BarcodeScanner() {
           </View>
 
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.addButton} onPress={addToMeal}>
+            <TouchableOpacity 
+              style={styles.addButton} 
+              onPress={addToMeal}
+              accessibilityLabel="Add scanned product to meal"
+              accessibilityRole="button"
+            >
               <Text style={styles.addButtonText}>Add to Meal</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.scanAgainButton} onPress={resetScanner}>
+            <TouchableOpacity 
+              style={styles.scanAgainButton} 
+              onPress={resetScanner}
+              accessibilityLabel="Scan another barcode"
+              accessibilityRole="button"
+            >
               <Text style={styles.scanAgainButtonText}>Scan Another</Text>
             </TouchableOpacity>
           </View>
@@ -407,5 +428,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
