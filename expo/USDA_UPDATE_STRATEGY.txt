@@ -1,0 +1,1 @@
+﻿# USDA Update Strategy - Smart Incremental Updates
